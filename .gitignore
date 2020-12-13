@@ -1,15 +1,12 @@
-# Binaries for programs and plugins
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
+# A default .gitignore for Create Go App project.
+# Author: Vic Shóstak <truewebartisans@gmail.com> (https://1wa.co)
 
-# Test binary, built with `go test -c`
-*.test
+# macOS
+**/.DS_store
 
-# Output of the go coverage tool, specifically when used with LiteIDE
-*.out
+# Go builds
+**/app/
+**/build/
 
-# Dependency directories (remove the comment below to include it)
-# vendor/
+# Node.js dependencies
+**/node_modules/
