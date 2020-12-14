@@ -7,13 +7,10 @@ jobs:
     steps:
     - uses: actions/checkout@master
 
-    - name: install task
-      run: |
-        sh -c "$(curl -ssL https://taskfile.dev/install.sh)" -- -d
     - name: run tests
       uses: cedrickring/golang-action@1.6.0
       with:
-        args: ./bin/task test
+        args: go test -coverage
       env:
         GO111MODULE: "on"
         PROJECT_PATH: "./backend"
