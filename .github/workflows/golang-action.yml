@@ -7,11 +7,13 @@ jobs:
     steps:
     - uses: actions/checkout@master
 
-    - name: Install Task
-      uses: Arduino/actions/setup-taskfile@master
-      
-    - name: run tests
-      uses: cedrickring/golang-action@1.6.0
+    - uses: cedrickring/golang-action@1.6.0
+
+    - name: install task
+      run: |
+        sudo snap install task --classic
+    
+    - name: run tests  
       with:
         args: task test
       env:
