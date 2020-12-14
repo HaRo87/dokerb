@@ -9,7 +9,7 @@ jobs:
 
     - name: install task
       run: |
-        sh -c "$(curl -ssL https://taskfile.dev/install.sh)" -- -d
+        sh -c "$(curl -ssL https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
     - name: run tests
       uses: cedrickring/golang-action@1.6.0
       with:
