@@ -10,7 +10,7 @@ jobs:
     - name: run tests
       uses: cedrickring/golang-action@1.6.0
       with:
-        args: go test -coverprofile=cover.out | gocov convert cover.out | gocov-xml > coverage.xml
+        args: go test -race -coverprofile=coverage.txt -covermode=atomic ./...
       env:
         GO111MODULE: "on"
         PROJECT_PATH: "./backend"
