@@ -5,19 +5,15 @@ jobs:
     name: run
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout
-      uses: actions/checkout@master
-
-    - name: Golang
-      uses: cedrickring/golang-action@1.6.0
+    - uses: actions/checkout@master
 
     - name: install task
       run: |
-        sudo snap install task --classic
-    
-    - name: run tests  
+        sh -c "$(curl -ssL https://taskfile.dev/install.sh)" -- -d
+    - name: run tests
+      uses: cedrickring/golang-action@1.6.0
       with:
-        args: task test
+        args: ./bin/task test
       env:
         GO111MODULE: "on"
         PROJECT_PATH: "./backend"
