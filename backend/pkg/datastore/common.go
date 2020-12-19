@@ -3,9 +3,6 @@ package datastore
 // DataStore defines the common interface a datastore for
 // the Doker backend must implement.
 type DataStore interface {
-	CreateStore(path string) error
-	DeleteStore(path string) error
-	Close() error
 	CreateSession(timeout int64) (string, error)
 	JoinSession(sessionHash, name string) error
 	LeaveSession(sessionHash, name string) error
