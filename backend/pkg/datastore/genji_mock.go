@@ -1,6 +1,7 @@
 package datastore
 
 import (
+	"github.com/genjidb/genji/sql/query"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -13,4 +14,10 @@ type MockGenjiDB struct {
 func (m *MockGenjiDB) Exec(q string, args ...interface{}) error {
 	arguments := m.Called(q)
 	return arguments.Error(0)
+}
+
+// Query implements the GenjiDB interface
+func (m *MockGenjiDB) Query(q string, args ...interface{}) (*query.Result, error) {
+	arguments := m.Called(q)
+	return arguments.Get(0).(*query.Result), arguments.Error(1)
 }
