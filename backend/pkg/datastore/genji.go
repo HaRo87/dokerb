@@ -21,7 +21,11 @@ func NewGenjiDatastore(db GenjiDB) (DataStore, error) {
 
 	ds.db = db
 
-	ds.db.Exec("CREATE TABLE sessions")
+	err := ds.db.Exec("CREATE TABLE sessions")
+
+	if err != nil {
+		return nil, fmt.Errorf("Unable to create sessions table")
+	}
 
 	return ds, nil
 }

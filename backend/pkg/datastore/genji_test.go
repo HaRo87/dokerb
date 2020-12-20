@@ -1,6 +1,7 @@
 package datastore
 
 import (
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -10,12 +11,20 @@ func TestNilDB(t *testing.T) {
 	assert.Errorf(t, err, "Proper DB must be provided and not nil")
 }
 
+func TestErrorOnDBSetupCreateTable(t *testing.T) {
+	m := new(MockGenjiDB)
+	m.On("Exec", "CREATE TABLE sessions").Return(fmt.Errorf("Ooops, something went wrong"))
+	_, err := NewGenjiDatastore(m)
+	assert.Errorf(t, err, "Unable to create sessions table")
+
+	m.MethodCalled("Exec", "CREATE TABLE sessions")
+}
+
 func TestCorrectDBSetup(t *testing.T) {
 	m := new(MockGenjiDB)
+	m.On("Exec", "CREATE TABLE sessions").Return(nil)
 	_, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
 
-	eq := `CREATE TABLE sessions`
-
-	assert.Equal(t, m.CalledWith()[0], eq)
+	m.MethodCalled("Exec", "CREATE TABLE sessions")
 }
