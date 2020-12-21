@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"github.com/genjidb/genji"
 	"github.com/genjidb/genji/sql/query"
 	"sync"
 )
@@ -13,11 +14,17 @@ import (
 type GenjiDB interface {
 	Exec(q string, args ...interface{}) error
 	Query(q string, args ...interface{}) (*query.Result, error)
+	Update(fn func(tx *genji.Tx) error) error
 }
 
 // GenjiDatastore struct which holds the actual database
 type GenjiDatastore struct {
 	db GenjiDB
+}
+
+type session struct {
+	Token string
+	Users []string
 }
 
 var lock = &sync.Mutex{}
@@ -57,7 +64,11 @@ func (g GenjiDatastore) CreateSession() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("Unable to create session token")
 	}
-	err = si.db.Exec("INSERT INTO sessions (id) VALUES (?)", st)
+	s := session{
+		Token: st,
+		Users: []string{},
+	}
+	err = si.db.Exec("INSERT INTO sessions VALUES ?", &s)
 	if err != nil {
 		return "", fmt.Errorf("Unable to store session token")
 	}

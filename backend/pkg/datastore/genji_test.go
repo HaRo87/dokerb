@@ -1,8 +1,12 @@
 package datastore
 
 import (
+	"context"
 	"fmt"
+	"github.com/genjidb/genji"
 	"github.com/stretchr/testify/assert"
+	"io/ioutil"
+	"os"
 	"testing"
 )
 
@@ -57,16 +61,26 @@ func TestCorrectDBSetup(t *testing.T) {
 	m.MethodCalled("Exec", "CREATE TABLE sessions")
 }
 
+func TestCorrectDBSetupWithGenji(t *testing.T) {
+	td, _ := ioutil.TempDir("", "db-test")
+	g, _ := genji.Open(td + "/my.db")
+	g = g.WithContext(context.Background())
+	defer g.Close()
+	defer os.RemoveAll(td)
+	_, err := NewGenjiDatastore(g)
+	assert.NoError(t, err)
+}
+
 func TestCreateSessionFailsDueToExecError(t *testing.T) {
 	m := new(MockGenjiDB)
 	m.On("Exec", "CREATE TABLE sessions").Return(nil)
 	ds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
-	m.On("Exec", "INSERT INTO sessions (id) VALUES (?)").Return(fmt.Errorf("Ooops, something went wrong"))
+	m.On("Exec", "INSERT INTO sessions VALUES ?").Return(fmt.Errorf("Ooops, something went wrong"))
 	token, err2 := ds.CreateSession()
 	assert.Empty(t, token)
 	assert.Errorf(t, err2, "Unable to store session token")
-	m.MethodCalled("Exec", "INSERT INTO sessions (id) VALUES (?)")
+	m.MethodCalled("Exec", "INSERT INTO sessions VALUES ?")
 }
 
 func TestCreateSessionSuccess(t *testing.T) {
@@ -74,9 +88,9 @@ func TestCreateSessionSuccess(t *testing.T) {
 	m.On("Exec", "CREATE TABLE sessions").Return(nil)
 	ds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
-	m.On("Exec", "INSERT INTO sessions (id) VALUES (?)").Return(nil)
+	m.On("Exec", "INSERT INTO sessions VALUES ?").Return(nil)
 	token, err2 := ds.CreateSession()
 	assert.Equal(t, 32, len(token))
 	assert.NoError(t, err2)
-	m.MethodCalled("Exec", "INSERT INTO sessions (id) VALUES (?)")
+	m.MethodCalled("Exec", "INSERT INTO sessions VALUES ?")
 }
