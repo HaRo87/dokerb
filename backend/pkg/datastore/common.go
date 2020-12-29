@@ -4,10 +4,10 @@ package datastore
 // the Doker backend must implement.
 type DataStore interface {
 	CreateSession() (string, error)
-	JoinSession(sessionHash, name string) error
-	LeaveSession(sessionHash, name string) error
-	AddWorkPackage(id, summary string) error
-	RemoveWorkPackage(id string) error
-	AddEstimate(id string, effort, standardDeviation float64) error
-	RemoveEstimate(id string) error
+	JoinSession(token, name string) error
+	LeaveSession(token, name string) error
+	AddWorkPackage(token, id, summary string) error
+	RemoveWorkPackage(token, id string) error
+	AddEstimate(token, id string, effort, standardDeviation float64) error
+	RemoveEstimate(token, id string) error
 }

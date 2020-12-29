@@ -94,3 +94,46 @@ func TestCreateSessionSuccess(t *testing.T) {
 	assert.NoError(t, err2)
 	m.MethodCalled("Exec", "INSERT INTO sessions VALUES ?")
 }
+
+func TestCreateSessionSuccessWithRealDB(t *testing.T) {
+	td, _ := ioutil.TempDir("", "db-test")
+	g, _ := genji.Open(td + "/my.db")
+	g = g.WithContext(context.Background())
+	defer g.Close()
+	defer os.RemoveAll(td)
+	gds, err := NewGenjiDatastore(g)
+	assert.NoError(t, err)
+	token, err2 := gds.CreateSession()
+	assert.NoError(t, err2)
+	assert.Equal(t, 32, len(token))
+}
+
+func TestJoinSessionSuccessWithRealDB(t *testing.T) {
+	td, _ := ioutil.TempDir("", "db-test")
+	g, _ := genji.Open(td + "/my.db")
+	g = g.WithContext(context.Background())
+	defer g.Close()
+	defer os.RemoveAll(td)
+	gds, err := NewGenjiDatastore(g)
+	assert.NoError(t, err)
+	token, err2 := gds.CreateSession()
+	assert.NoError(t, err2)
+	err3 := gds.JoinSession(token, "Bob")
+	assert.NoError(t, err3)
+}
+
+func TestJoinSessionErrorWhileTryingToAddUserTwiceWithRealDB(t *testing.T) {
+	td, _ := ioutil.TempDir("", "db-test")
+	g, _ := genji.Open(td + "/my.db")
+	g = g.WithContext(context.Background())
+	defer g.Close()
+	defer os.RemoveAll(td)
+	gds, err := NewGenjiDatastore(g)
+	assert.NoError(t, err)
+	token, err2 := gds.CreateSession()
+	assert.NoError(t, err2)
+	err3 := gds.JoinSession(token, "Bob")
+	assert.NoError(t, err3)
+	err4 := gds.JoinSession(token, "Bob")
+	assert.Errorf(t, err4, "User with name: Bob already part of session")
+}

@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/genjidb/genji"
+	"github.com/genjidb/genji/document"
 	"github.com/genjidb/genji/sql/query"
 	"sync"
 )
@@ -75,27 +76,49 @@ func (g GenjiDatastore) CreateSession() (string, error) {
 	return st, nil
 }
 
-func (g GenjiDatastore) JoinSession(sessionHash, name string) error {
+func (g GenjiDatastore) JoinSession(token, name string) error {
+	if len(token) != defaultTokenLength {
+		return fmt.Errorf("Session token does not match desired length")
+	}
+	if name == "" {
+		return fmt.Errorf("User name should not be empty")
+	}
+
+	se, err := sessionExists(token)
+	if !se {
+		return fmt.Errorf("Specified session does not exist")
+	}
+	var u []string
+	u, err = getUsersFromSession(token)
+
+	if !userExists(u, name) {
+		u = append(u, name)
+	} else {
+		return fmt.Errorf("User with name: %s already part of session", name)
+	}
+
+	err = si.db.Exec("UPDATE sessions SET users = ? WHERE token = ?", u, token)
+
+	return err
+}
+
+func (g GenjiDatastore) LeaveSession(token, name string) error {
 	return nil
 }
 
-func (g GenjiDatastore) LeaveSession(sessionHash, name string) error {
+func (g GenjiDatastore) AddWorkPackage(token, id, summary string) error {
 	return nil
 }
 
-func (g GenjiDatastore) AddWorkPackage(id, summary string) error {
+func (g GenjiDatastore) RemoveWorkPackage(token, id string) error {
 	return nil
 }
 
-func (g GenjiDatastore) RemoveWorkPackage(id string) error {
+func (g GenjiDatastore) AddEstimate(token, id string, effort, standardDeviation float64) error {
 	return nil
 }
 
-func (g GenjiDatastore) AddEstimate(id string, effort, standardDeviation float64) error {
-	return nil
-}
-
-func (g GenjiDatastore) RemoveEstimate(id string) error {
+func (g GenjiDatastore) RemoveEstimate(token, id string) error {
 	return nil
 }
 
@@ -110,4 +133,60 @@ func generateToken(l int) (string, error) {
 	}
 
 	return hex.EncodeToString(b)[0:l], nil
+}
+
+func sessionExists(t string) (bool, error) {
+	var tokens []string
+	sessionExists := false
+	res, err := si.db.Query("SELECT token FROM sessions")
+	defer res.Close()
+
+	err = res.Iterate(func(d document.Document) error {
+		var token string
+		err = document.Scan(d, &token)
+		if err != nil {
+			return err
+		}
+		tokens = append(tokens, token)
+		return nil
+	})
+
+	for _, elem := range tokens {
+		if elem == t {
+			sessionExists = true
+			break
+		}
+	}
+
+	return sessionExists, err
+}
+
+func getUsersFromSession(t string) ([]string, error) {
+	var users []string
+
+	res, err := si.db.Query("SELECT users FROM sessions WHERE token = ?", t)
+	defer res.Close()
+
+	err = res.Iterate(func(d document.Document) error {
+		err = document.Scan(d, &users)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
+	return users, err
+}
+
+func userExists(users []string, user string) bool {
+	userExists := false
+
+	for _, elem := range users {
+		if elem == user {
+			userExists = true
+			break
+		}
+	}
+
+	return userExists
 }
