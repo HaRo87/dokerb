@@ -14,14 +14,19 @@ var m *MockGenjiDB
 var db *genji.DB
 var td string
 
-func setupTestCase(t *testing.T) func(t *testing.T) {
+func setupTestCaseForMock(t *testing.T) func(t *testing.T) {
 	m = new(MockGenjiDB)
+	return func(t *testing.T) {
+		m = nil
+	}
+}
+
+func setupTestCaseForRealDB(t *testing.T) func(t *testing.T) {
 	td, _ = ioutil.TempDir("", "db-test")
 	db, _ = genji.Open(td + "/my.db")
 	db = db.WithContext(context.Background())
 
 	return func(t *testing.T) {
-		m = nil
 		db.Close()
 		os.RemoveAll(td)
 		td = ""
@@ -34,7 +39,7 @@ func TestNilDB(t *testing.T) {
 }
 
 func TestErrorOnDBSetupCreateTable(t *testing.T) {
-	setupAndTearDown := setupTestCase(t)
+	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 	m.On("Exec", "CREATE TABLE sessions").Return(fmt.Errorf("Ooops, something went wrong"))
 	_, err := NewGenjiDatastore(m)
@@ -44,7 +49,7 @@ func TestErrorOnDBSetupCreateTable(t *testing.T) {
 }
 
 func TestSingletonPatternWorks(t *testing.T) {
-	setupAndTearDown := setupTestCase(t)
+	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 	m.On("Exec", "CREATE TABLE sessions").Return(nil)
 	g1, err := NewGenjiDatastore(m)
@@ -73,7 +78,7 @@ func TestGenerateTokenWithProperLength(t *testing.T) {
 }
 
 func TestCorrectDBSetup(t *testing.T) {
-	setupAndTearDown := setupTestCase(t)
+	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 	m.On("Exec", "CREATE TABLE sessions").Return(nil)
 	_, err := NewGenjiDatastore(m)
@@ -83,14 +88,14 @@ func TestCorrectDBSetup(t *testing.T) {
 }
 
 func TestCorrectDBSetupWithGenji(t *testing.T) {
-	setupAndTearDown := setupTestCase(t)
+	setupAndTearDown := setupTestCaseForRealDB(t)
 	defer setupAndTearDown(t)
 	_, err := NewGenjiDatastore(db)
 	assert.NoError(t, err)
 }
 
 func TestCreateSessionFailsDueToExecError(t *testing.T) {
-	setupAndTearDown := setupTestCase(t)
+	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 	m.On("Exec", "CREATE TABLE sessions").Return(nil)
 	ds, err := NewGenjiDatastore(m)
@@ -103,7 +108,7 @@ func TestCreateSessionFailsDueToExecError(t *testing.T) {
 }
 
 func TestCreateSessionSuccess(t *testing.T) {
-	setupAndTearDown := setupTestCase(t)
+	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 	m.On("Exec", "CREATE TABLE sessions").Return(nil)
 	ds, err := NewGenjiDatastore(m)
@@ -116,7 +121,7 @@ func TestCreateSessionSuccess(t *testing.T) {
 }
 
 func TestCreateSessionSuccessWithRealDB(t *testing.T) {
-	setupAndTearDown := setupTestCase(t)
+	setupAndTearDown := setupTestCaseForRealDB(t)
 	defer setupAndTearDown(t)
 	gds, err := NewGenjiDatastore(db)
 	assert.NoError(t, err)
@@ -126,7 +131,7 @@ func TestCreateSessionSuccessWithRealDB(t *testing.T) {
 }
 
 func TestJoinSessionSuccessWithRealDB(t *testing.T) {
-	setupAndTearDown := setupTestCase(t)
+	setupAndTearDown := setupTestCaseForRealDB(t)
 	defer setupAndTearDown(t)
 	gds, err := NewGenjiDatastore(db)
 	assert.NoError(t, err)
@@ -137,7 +142,7 @@ func TestJoinSessionSuccessWithRealDB(t *testing.T) {
 }
 
 func TestJoinSessionErrorWhileTryingToAddUserTwiceWithRealDB(t *testing.T) {
-	setupAndTearDown := setupTestCase(t)
+	setupAndTearDown := setupTestCaseForRealDB(t)
 	defer setupAndTearDown(t)
 	gds, err := NewGenjiDatastore(db)
 	assert.NoError(t, err)
