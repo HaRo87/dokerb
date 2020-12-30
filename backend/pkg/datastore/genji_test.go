@@ -10,13 +10,32 @@ import (
 	"testing"
 )
 
+var m *MockGenjiDB
+var db *genji.DB
+var td string
+
+func setupTestCase(t *testing.T) func(t *testing.T) {
+	m = new(MockGenjiDB)
+	td, _ = ioutil.TempDir("", "db-test")
+	db, _ = genji.Open(td + "/my.db")
+	db = db.WithContext(context.Background())
+
+	return func(t *testing.T) {
+		m = nil
+		db.Close()
+		os.RemoveAll(td)
+		td = ""
+	}
+}
+
 func TestNilDB(t *testing.T) {
 	_, err := NewGenjiDatastore(nil)
 	assert.Errorf(t, err, "Proper DB must be provided and not nil")
 }
 
 func TestErrorOnDBSetupCreateTable(t *testing.T) {
-	m := new(MockGenjiDB)
+	setupAndTearDown := setupTestCase(t)
+	defer setupAndTearDown(t)
 	m.On("Exec", "CREATE TABLE sessions").Return(fmt.Errorf("Ooops, something went wrong"))
 	_, err := NewGenjiDatastore(m)
 	assert.Errorf(t, err, "Unable to create sessions table")
@@ -25,7 +44,8 @@ func TestErrorOnDBSetupCreateTable(t *testing.T) {
 }
 
 func TestSingletonPatternWorks(t *testing.T) {
-	m := new(MockGenjiDB)
+	setupAndTearDown := setupTestCase(t)
+	defer setupAndTearDown(t)
 	m.On("Exec", "CREATE TABLE sessions").Return(nil)
 	g1, err := NewGenjiDatastore(m)
 	g2, err2 := NewGenjiDatastore(m)
@@ -53,7 +73,8 @@ func TestGenerateTokenWithProperLength(t *testing.T) {
 }
 
 func TestCorrectDBSetup(t *testing.T) {
-	m := new(MockGenjiDB)
+	setupAndTearDown := setupTestCase(t)
+	defer setupAndTearDown(t)
 	m.On("Exec", "CREATE TABLE sessions").Return(nil)
 	_, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
@@ -62,17 +83,15 @@ func TestCorrectDBSetup(t *testing.T) {
 }
 
 func TestCorrectDBSetupWithGenji(t *testing.T) {
-	td, _ := ioutil.TempDir("", "db-test")
-	g, _ := genji.Open(td + "/my.db")
-	g = g.WithContext(context.Background())
-	defer g.Close()
-	defer os.RemoveAll(td)
-	_, err := NewGenjiDatastore(g)
+	setupAndTearDown := setupTestCase(t)
+	defer setupAndTearDown(t)
+	_, err := NewGenjiDatastore(db)
 	assert.NoError(t, err)
 }
 
 func TestCreateSessionFailsDueToExecError(t *testing.T) {
-	m := new(MockGenjiDB)
+	setupAndTearDown := setupTestCase(t)
+	defer setupAndTearDown(t)
 	m.On("Exec", "CREATE TABLE sessions").Return(nil)
 	ds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
@@ -84,7 +103,8 @@ func TestCreateSessionFailsDueToExecError(t *testing.T) {
 }
 
 func TestCreateSessionSuccess(t *testing.T) {
-	m := new(MockGenjiDB)
+	setupAndTearDown := setupTestCase(t)
+	defer setupAndTearDown(t)
 	m.On("Exec", "CREATE TABLE sessions").Return(nil)
 	ds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
@@ -96,12 +116,9 @@ func TestCreateSessionSuccess(t *testing.T) {
 }
 
 func TestCreateSessionSuccessWithRealDB(t *testing.T) {
-	td, _ := ioutil.TempDir("", "db-test")
-	g, _ := genji.Open(td + "/my.db")
-	g = g.WithContext(context.Background())
-	defer g.Close()
-	defer os.RemoveAll(td)
-	gds, err := NewGenjiDatastore(g)
+	setupAndTearDown := setupTestCase(t)
+	defer setupAndTearDown(t)
+	gds, err := NewGenjiDatastore(db)
 	assert.NoError(t, err)
 	token, err2 := gds.CreateSession()
 	assert.NoError(t, err2)
@@ -109,12 +126,9 @@ func TestCreateSessionSuccessWithRealDB(t *testing.T) {
 }
 
 func TestJoinSessionSuccessWithRealDB(t *testing.T) {
-	td, _ := ioutil.TempDir("", "db-test")
-	g, _ := genji.Open(td + "/my.db")
-	g = g.WithContext(context.Background())
-	defer g.Close()
-	defer os.RemoveAll(td)
-	gds, err := NewGenjiDatastore(g)
+	setupAndTearDown := setupTestCase(t)
+	defer setupAndTearDown(t)
+	gds, err := NewGenjiDatastore(db)
 	assert.NoError(t, err)
 	token, err2 := gds.CreateSession()
 	assert.NoError(t, err2)
@@ -123,12 +137,9 @@ func TestJoinSessionSuccessWithRealDB(t *testing.T) {
 }
 
 func TestJoinSessionErrorWhileTryingToAddUserTwiceWithRealDB(t *testing.T) {
-	td, _ := ioutil.TempDir("", "db-test")
-	g, _ := genji.Open(td + "/my.db")
-	g = g.WithContext(context.Background())
-	defer g.Close()
-	defer os.RemoveAll(td)
-	gds, err := NewGenjiDatastore(g)
+	setupAndTearDown := setupTestCase(t)
+	defer setupAndTearDown(t)
+	gds, err := NewGenjiDatastore(db)
 	assert.NoError(t, err)
 	token, err2 := gds.CreateSession()
 	assert.NoError(t, err2)
