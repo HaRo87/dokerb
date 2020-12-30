@@ -140,6 +140,16 @@ func TestJoinSessionFailsDueToEmptyName(t *testing.T) {
 	assert.Errorf(t, err2, "User name should not be empty")
 }
 
+func TestJoinSessionFailsDueToWromgTokenLength(t *testing.T) {
+	setupAndTearDown := setupTestCaseForMock(t)
+	defer setupAndTearDown(t)
+	m.On("Exec", "CREATE TABLE sessions").Return(nil)
+	gds, err := NewGenjiDatastore(m)
+	assert.NoError(t, err)
+	err2 := gds.JoinSession("1234567890123456789012345678901212", "")
+	assert.Errorf(t, err2, "Session token does not match desired length")
+}
+
 func TestJoinSessionFailsDueToNonExistingSessionWithRealDB(t *testing.T) {
 	setupAndTearDown := setupTestCaseForRealDB(t)
 	defer setupAndTearDown(t)
@@ -204,6 +214,16 @@ func TestLeaveSessionFailsDueToEmptyName(t *testing.T) {
 	assert.NoError(t, err)
 	err2 := gds.LeaveSession("12345678901234567890123456789012", "")
 	assert.Errorf(t, err2, "User name should not be empty")
+}
+
+func TestLeaveSessionFailsDueToWrongTokenLength(t *testing.T) {
+	setupAndTearDown := setupTestCaseForMock(t)
+	defer setupAndTearDown(t)
+	m.On("Exec", "CREATE TABLE sessions").Return(nil)
+	gds, err := NewGenjiDatastore(m)
+	assert.NoError(t, err)
+	err2 := gds.LeaveSession("123456789012345678901234567890", "")
+	assert.Errorf(t, err2, "Session token does not match desired length")
 }
 
 func TestLeaveSessionFailsDueToNonExistingSessionWithRealDB(t *testing.T) {
