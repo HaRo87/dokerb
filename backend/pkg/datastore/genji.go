@@ -76,6 +76,8 @@ func (g GenjiDatastore) CreateSession() (string, error) {
 	return st, nil
 }
 
+// JoinSession allows a user with the specified name to join a
+// session identified by the given token
 func (g GenjiDatastore) JoinSession(token, name string) error {
 	if len(token) != defaultTokenLength {
 		return fmt.Errorf("Session token does not match desired length")
@@ -103,6 +105,38 @@ func (g GenjiDatastore) JoinSession(token, name string) error {
 }
 
 func (g GenjiDatastore) LeaveSession(token, name string) error {
+	if len(token) != defaultTokenLength {
+		return fmt.Errorf("Session token does not match desired length")
+	}
+	if name == "" {
+		return fmt.Errorf("User name should not be empty")
+	}
+
+	se, err := sessionExists(token)
+	if !se {
+		return fmt.Errorf("Specified session does not exist")
+	}
+
+	var u []string
+
+	u, err = getUsersFromSession(token)
+
+	if err != nil {
+		return fmt.Errorf("Unable to get Users from session")
+	}
+
+	u, err = removeUser(u, name)
+
+	if err != nil {
+		return fmt.Errorf("Unable to remove user: %s from session", name)
+	}
+
+	err = si.db.Exec("UPDATE sessions SET users = ? WHERE token = ?", u, token)
+
+	return err
+}
+
+func (g GenjiDatastore) CloseSession(token string) error {
 	return nil
 }
 
@@ -165,6 +199,11 @@ func getUsersFromSession(t string) ([]string, error) {
 	var users []string
 
 	res, err := si.db.Query("SELECT users FROM sessions WHERE token = ?", t)
+
+	if err != nil {
+		return users, err
+	}
+
 	defer res.Close()
 
 	err = res.Iterate(func(d document.Document) error {
@@ -189,4 +228,19 @@ func userExists(users []string, user string) bool {
 	}
 
 	return userExists
+}
+
+func removeUser(users []string, user string) ([]string, error) {
+	if userExists(users, user) {
+		for i, e := range users {
+			if e == user {
+				users = append(users[:i], users[i+1:]...)
+				break
+			}
+		}
+	} else {
+		return users, fmt.Errorf("User with name: %s is not part of session", user)
+	}
+
+	return users, nil
 }

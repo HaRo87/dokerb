@@ -6,6 +6,7 @@ type DataStore interface {
 	CreateSession() (string, error)
 	JoinSession(token, name string) error
 	LeaveSession(token, name string) error
+	CloseSession(token string) error
 	AddWorkPackage(token, id, summary string) error
 	RemoveWorkPackage(token, id string) error
 	AddEstimate(token, id string, effort, standardDeviation float64) error

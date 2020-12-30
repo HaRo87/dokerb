@@ -130,6 +130,27 @@ func TestCreateSessionSuccessWithRealDB(t *testing.T) {
 	assert.Equal(t, 32, len(token))
 }
 
+func TestJoinSessionFailsDueToEmptyName(t *testing.T) {
+	setupAndTearDown := setupTestCaseForMock(t)
+	defer setupAndTearDown(t)
+	m.On("Exec", "CREATE TABLE sessions").Return(nil)
+	gds, err := NewGenjiDatastore(m)
+	assert.NoError(t, err)
+	err2 := gds.JoinSession("12345678901234567890123456789012", "")
+	assert.Errorf(t, err2, "User name should not be empty")
+}
+
+func TestJoinSessionFailsDueToNonExistingSessionWithRealDB(t *testing.T) {
+	setupAndTearDown := setupTestCaseForRealDB(t)
+	defer setupAndTearDown(t)
+	gds, err := NewGenjiDatastore(db)
+	assert.NoError(t, err)
+	_, err2 := gds.CreateSession()
+	assert.NoError(t, err2)
+	err3 := gds.JoinSession("12345678901234567890123456789012", "Tigger")
+	assert.Errorf(t, err3, "Specified session does not exist")
+}
+
 func TestJoinSessionSuccessWithRealDB(t *testing.T) {
 	setupAndTearDown := setupTestCaseForRealDB(t)
 	defer setupAndTearDown(t)
@@ -137,7 +158,7 @@ func TestJoinSessionSuccessWithRealDB(t *testing.T) {
 	assert.NoError(t, err)
 	token, err2 := gds.CreateSession()
 	assert.NoError(t, err2)
-	err3 := gds.JoinSession(token, "Bob")
+	err3 := gds.JoinSession(token, "Tigger")
 	assert.NoError(t, err3)
 }
 
@@ -148,8 +169,65 @@ func TestJoinSessionErrorWhileTryingToAddUserTwiceWithRealDB(t *testing.T) {
 	assert.NoError(t, err)
 	token, err2 := gds.CreateSession()
 	assert.NoError(t, err2)
-	err3 := gds.JoinSession(token, "Bob")
+	err3 := gds.JoinSession(token, "Tigger")
 	assert.NoError(t, err3)
-	err4 := gds.JoinSession(token, "Bob")
-	assert.Errorf(t, err4, "User with name: Bob already part of session")
+	err4 := gds.JoinSession(token, "Tigger")
+	assert.Errorf(t, err4, "User with name: Tigger already part of session")
+}
+
+func TestRemoveUserFromEmptyList(t *testing.T) {
+	l, err := removeUser([]string{}, "Tigger")
+	assert.Errorf(t, err, "User with name: Tigger is not part of session")
+	assert.Len(t, l, 0)
+}
+
+func TestRemoveUserFromListWithoutThatUserBeingPartOfThatList(t *testing.T) {
+	users := []string{"Tigger", "Rabbit", "Piglet"}
+	l, err := removeUser(users, "Winnie-the-Pooh")
+	assert.Errorf(t, err, "User with name: Winnie-the-Pooh is not part of session")
+	assert.Len(t, l, 3)
+}
+
+func TestRemoveUserSuccess(t *testing.T) {
+	users := []string{"Tigger", "Rabbit", "Piglet"}
+	l, err := removeUser(users, "Tigger")
+	assert.NoError(t, err)
+	assert.Len(t, l, 2)
+	assert.NotContains(t, l, "Tigger")
+}
+
+func TestLeaveSessionFailsDueToEmptyName(t *testing.T) {
+	setupAndTearDown := setupTestCaseForMock(t)
+	defer setupAndTearDown(t)
+	m.On("Exec", "CREATE TABLE sessions").Return(nil)
+	gds, err := NewGenjiDatastore(m)
+	assert.NoError(t, err)
+	err2 := gds.LeaveSession("12345678901234567890123456789012", "")
+	assert.Errorf(t, err2, "User name should not be empty")
+}
+
+func TestLeaveSessionFailsDueToNonExistingSessionWithRealDB(t *testing.T) {
+	setupAndTearDown := setupTestCaseForRealDB(t)
+	defer setupAndTearDown(t)
+	gds, err := NewGenjiDatastore(db)
+	assert.NoError(t, err)
+	_, err2 := gds.CreateSession()
+	assert.NoError(t, err2)
+	err3 := gds.LeaveSession("12345678901234567890123456789012", "Tigger")
+	assert.Errorf(t, err3, "Specified session does not exist")
+}
+
+func TestLeaveSessionSuccessWithRealDB(t *testing.T) {
+	setupAndTearDown := setupTestCaseForRealDB(t)
+	defer setupAndTearDown(t)
+	gds, err := NewGenjiDatastore(db)
+	assert.NoError(t, err)
+	token, err2 := gds.CreateSession()
+	assert.NoError(t, err2)
+	err3 := gds.JoinSession(token, "Tigger")
+	assert.NoError(t, err3)
+	err4 := gds.JoinSession(token, "Rabbit")
+	assert.NoError(t, err4)
+	err5 := gds.LeaveSession(token, "Tigger")
+	assert.NoError(t, err5)
 }
