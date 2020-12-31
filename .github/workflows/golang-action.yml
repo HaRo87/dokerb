@@ -1,0 +1,26 @@
+on: push
+name: Testing Go Code
+jobs:
+  checks:
+    name: run
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+
+    - name: run tests
+      uses: cedrickring/golang-action@1.6.0
+      with:
+        args: go test -race -coverprofile=coverage.txt -covermode=atomic ./...
+      env:
+        GO111MODULE: "on"
+        PROJECT_PATH: "./backend"
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v1
+      with:
+        file: ./backend/coverage.txt
+        flags: unittests
+        name: codecov-umbrella
+        env_vars: OS,GOLANG
+        fail_ci_if_error: true
+        path_to_write_report: ./codecov_report.gz
