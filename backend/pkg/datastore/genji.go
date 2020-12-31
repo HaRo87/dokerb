@@ -24,8 +24,14 @@ type GenjiDatastore struct {
 }
 
 type session struct {
-	Token string
-	Users []string
+	Token        string
+	Users        []string
+	Workpackages []workpackage
+}
+
+type workpackage struct {
+	ID      string
+	Summary string
 }
 
 var lock = &sync.Mutex{}
@@ -104,6 +110,8 @@ func (g GenjiDatastore) JoinSession(token, name string) error {
 	return err
 }
 
+// LeaveSession allows a user with the specified name to leave a
+// session identified by the provided token
 func (g GenjiDatastore) LeaveSession(token, name string) error {
 	if len(token) != defaultTokenLength {
 		return fmt.Errorf("Session token does not match desired length")
@@ -136,12 +144,48 @@ func (g GenjiDatastore) LeaveSession(token, name string) error {
 	return err
 }
 
-func (g GenjiDatastore) CloseSession(token string) error {
-	return nil
+// RemoveSession deletes a session from the datastore
+func (g GenjiDatastore) RemoveSession(token string) error {
+	if len(token) != defaultTokenLength {
+		return fmt.Errorf("Session token does not match desired length")
+	}
+
+	se, err := sessionExists(token)
+	if !se {
+		return fmt.Errorf("Specified session does not exist")
+	}
+
+	err = si.db.Exec("DELETE FROM sessions WHERE token = ?", token)
+
+	return err
 }
 
+// AddWorkPackage adds a new work package to the specified session
+// identified by the provided ID and with an optional summary
 func (g GenjiDatastore) AddWorkPackage(token, id, summary string) error {
-	return nil
+	if len(token) != defaultTokenLength {
+		return fmt.Errorf("Session token does not match desired length")
+	}
+	if id == "" {
+		return fmt.Errorf("ID should not be empty")
+	}
+
+	se, err := sessionExists(token)
+	if !se {
+		return fmt.Errorf("Specified session does not exist")
+	}
+	var wps []workpackage
+	wps, err = getWorkpackagesFromSession(token)
+
+	if !workpackageExists(wps, id) {
+		wps = append(wps, workpackage{ID: id, Summary: summary})
+	} else {
+		return fmt.Errorf("Workpackage with ID: %s already part of session", id)
+	}
+
+	err = si.db.Exec("UPDATE sessions SET workpackages = ? WHERE token = ?", wps, token)
+
+	return err
 }
 
 func (g GenjiDatastore) RemoveWorkPackage(token, id string) error {
@@ -217,6 +261,28 @@ func getUsersFromSession(t string) ([]string, error) {
 	return users, err
 }
 
+func getWorkpackagesFromSession(t string) ([]workpackage, error) {
+	var wps []workpackage
+
+	res, err := si.db.Query("SELECT workpackages FROM sessions WHERE token = ?", t)
+
+	if err != nil {
+		return wps, err
+	}
+
+	defer res.Close()
+
+	err = res.Iterate(func(d document.Document) error {
+		err = document.Scan(d, &wps)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
+	return wps, err
+}
+
 func userExists(users []string, user string) bool {
 	userExists := false
 
@@ -228,6 +294,19 @@ func userExists(users []string, user string) bool {
 	}
 
 	return userExists
+}
+
+func workpackageExists(workpackages []workpackage, id string) bool {
+	workpackageExists := false
+
+	for _, elem := range workpackages {
+		if elem.ID == id {
+			workpackageExists = true
+			break
+		}
+	}
+
+	return workpackageExists
 }
 
 func removeUser(users []string, user string) ([]string, error) {
