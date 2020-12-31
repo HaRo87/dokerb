@@ -140,7 +140,7 @@ func TestJoinSessionFailsDueToEmptyName(t *testing.T) {
 	assert.Errorf(t, err2, "User name should not be empty")
 }
 
-func TestJoinSessionFailsDueToWromgTokenLength(t *testing.T) {
+func TestJoinSessionFailsDueToWrongTokenLength(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 	m.On("Exec", "CREATE TABLE sessions").Return(nil)
@@ -294,7 +294,7 @@ func TestAddWorkPackageToSessionFailsDueToEmptyID(t *testing.T) {
 	assert.Errorf(t, err2, "ID should not be empty")
 }
 
-func TestAddWorkPackageToSessionFailsDueToWromgTokenLength(t *testing.T) {
+func TestAddWorkPackageToSessionFailsDueToWrongTokenLength(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 	m.On("Exec", "CREATE TABLE sessions").Return(nil)
@@ -315,7 +315,7 @@ func TestAddWorkPackageToSessionFailsDueToNonExistingSessionWithRealDB(t *testin
 	assert.Errorf(t, err3, "Specified session does not exist")
 }
 
-func TestWorkPackageToSessionSuccessWithRealDB(t *testing.T) {
+func TestAddWorkPackageToSessionSuccessWithRealDB(t *testing.T) {
 	setupAndTearDown := setupTestCaseForRealDB(t)
 	defer setupAndTearDown(t)
 	gds, err := NewGenjiDatastore(db)
@@ -337,4 +337,222 @@ func TestAddWorkPackageToSessionErrorWhileTryingToAddWorkPackageTwiceWithRealDB(
 	assert.NoError(t, err3)
 	err4 := gds.AddWorkPackage(token, "01", "eat honey")
 	assert.Errorf(t, err4, "Workpackage with ID: 01 already part of session")
+}
+
+func TestRemoveWorkPackageFromSessionFailsDueToEmptyID(t *testing.T) {
+	setupAndTearDown := setupTestCaseForMock(t)
+	defer setupAndTearDown(t)
+	m.On("Exec", "CREATE TABLE sessions").Return(nil)
+	gds, err := NewGenjiDatastore(m)
+	assert.NoError(t, err)
+	err2 := gds.RemoveWorkPackage("12345678901234567890123456789012", "")
+	assert.Errorf(t, err2, "ID should not be empty")
+}
+
+func TestRemoveWorkPackageFromSessionFailsDueToWrongTokenLength(t *testing.T) {
+	setupAndTearDown := setupTestCaseForMock(t)
+	defer setupAndTearDown(t)
+	m.On("Exec", "CREATE TABLE sessions").Return(nil)
+	gds, err := NewGenjiDatastore(m)
+	assert.NoError(t, err)
+	err2 := gds.RemoveWorkPackage("1234567890123456789012345678901212", "01")
+	assert.Errorf(t, err2, "Session token does not match desired length")
+}
+
+func TestRemoveWorkPackageFromSessionFailsDueToNonExistingSessionWithRealDB(t *testing.T) {
+	setupAndTearDown := setupTestCaseForRealDB(t)
+	defer setupAndTearDown(t)
+	gds, err := NewGenjiDatastore(db)
+	assert.NoError(t, err)
+	_, err2 := gds.CreateSession()
+	assert.NoError(t, err2)
+	err3 := gds.RemoveWorkPackage("12345678901234567890123456789012", "01")
+	assert.Errorf(t, err3, "Specified session does not exist")
+}
+
+func TestRemoveWorkPackageFromSessionFailsDueToNonExistingIDWithRealDB(t *testing.T) {
+	setupAndTearDown := setupTestCaseForRealDB(t)
+	defer setupAndTearDown(t)
+	gds, err := NewGenjiDatastore(db)
+	assert.NoError(t, err)
+	token, err2 := gds.CreateSession()
+	assert.NoError(t, err2)
+	err3 := gds.RemoveWorkPackage(token, "01")
+	assert.Errorf(t, err3, "Unable to remove workpackage: 01 from session")
+}
+
+func TestRemoveWorkPackageFromSessionSuccessWithRealDB(t *testing.T) {
+	setupAndTearDown := setupTestCaseForRealDB(t)
+	defer setupAndTearDown(t)
+	gds, err := NewGenjiDatastore(db)
+	assert.NoError(t, err)
+	token, err2 := gds.CreateSession()
+	assert.NoError(t, err2)
+	err3 := gds.AddWorkPackage(token, "01", "eat honey")
+	assert.NoError(t, err3)
+	err4 := gds.RemoveWorkPackage(token, "01")
+	assert.NoError(t, err4)
+}
+
+func TestRemoveWorkPackageFromSessionErrorWhileTryingToRemoveWorkPackageTwiceWithRealDB(t *testing.T) {
+	setupAndTearDown := setupTestCaseForRealDB(t)
+	defer setupAndTearDown(t)
+	gds, err := NewGenjiDatastore(db)
+	assert.NoError(t, err)
+	token, err2 := gds.CreateSession()
+	assert.NoError(t, err2)
+	err3 := gds.AddWorkPackage(token, "01", "eat honey")
+	assert.NoError(t, err3)
+	err4 := gds.AddWorkPackage(token, "02", "harvest honey")
+	assert.NoError(t, err4)
+	err5 := gds.RemoveWorkPackage(token, "01")
+	assert.NoError(t, err5)
+	err6 := gds.RemoveWorkPackage(token, "01")
+	assert.Errorf(t, err6, "Unable to remove workpackage: 01 from session")
+}
+
+func TestGetUsersFromSessionFailsDueToWrongTokenLength(t *testing.T) {
+	setupAndTearDown := setupTestCaseForMock(t)
+	defer setupAndTearDown(t)
+	m.On("Exec", "CREATE TABLE sessions").Return(nil)
+	gds, err := NewGenjiDatastore(m)
+	assert.NoError(t, err)
+	_, err2 := gds.GetUsers("1234567890123456789012345678901212")
+	assert.Errorf(t, err2, "Session token does not match desired length")
+}
+
+func TestGetUsersFromSessionFailsDueToNonExistingSessionWithRealDB(t *testing.T) {
+	setupAndTearDown := setupTestCaseForRealDB(t)
+	defer setupAndTearDown(t)
+	gds, err := NewGenjiDatastore(db)
+	assert.NoError(t, err)
+	_, err2 := gds.CreateSession()
+	assert.NoError(t, err2)
+	_, err3 := gds.GetUsers("12345678901234567890123456789012")
+	assert.Errorf(t, err3, "Specified session does not exist")
+}
+
+func TestGetUsersFromSessionSuccessWithRealDB(t *testing.T) {
+	setupAndTearDown := setupTestCaseForRealDB(t)
+	defer setupAndTearDown(t)
+	gds, err := NewGenjiDatastore(db)
+	assert.NoError(t, err)
+	token, err2 := gds.CreateSession()
+	assert.NoError(t, err2)
+	err3 := gds.JoinSession(token, "Tigger")
+	assert.NoError(t, err3)
+	users, err4 := gds.GetUsers(token)
+	assert.NoError(t, err4)
+	assert.Equal(t, []string{"Tigger"}, users)
+}
+
+func TestGetWorkPackagesFromSessionFailsDueToWrongTokenLength(t *testing.T) {
+	setupAndTearDown := setupTestCaseForMock(t)
+	defer setupAndTearDown(t)
+	m.On("Exec", "CREATE TABLE sessions").Return(nil)
+	gds, err := NewGenjiDatastore(m)
+	assert.NoError(t, err)
+	_, err2 := gds.GetWorkPackages("1234567890123456789012345678901212")
+	assert.Errorf(t, err2, "Session token does not match desired length")
+}
+
+func TestGetWorkPackagesFromSessionFailsDueToNonExistingSessionWithRealDB(t *testing.T) {
+	setupAndTearDown := setupTestCaseForRealDB(t)
+	defer setupAndTearDown(t)
+	gds, err := NewGenjiDatastore(db)
+	assert.NoError(t, err)
+	_, err2 := gds.CreateSession()
+	assert.NoError(t, err2)
+	_, err3 := gds.GetWorkPackages("12345678901234567890123456789012")
+	assert.Errorf(t, err3, "Specified session does not exist")
+}
+
+func TestGetWorkPackagesFromSessionSuccessWithRealDB(t *testing.T) {
+	setupAndTearDown := setupTestCaseForRealDB(t)
+	defer setupAndTearDown(t)
+	gds, err := NewGenjiDatastore(db)
+	assert.NoError(t, err)
+	token, err2 := gds.CreateSession()
+	assert.NoError(t, err2)
+	err3 := gds.AddWorkPackage(token, "01", "eat honey")
+	assert.NoError(t, err3)
+	wps, err4 := gds.GetWorkPackages(token)
+	assert.NoError(t, err4)
+	assert.Equal(t, "01", wps[0].ID)
+	assert.Equal(t, "eat honey", wps[0].Summary)
+}
+
+func TestAddEstimateToWorkPackageFailsDueToEmptyID(t *testing.T) {
+	setupAndTearDown := setupTestCaseForMock(t)
+	defer setupAndTearDown(t)
+	m.On("Exec", "CREATE TABLE sessions").Return(nil)
+	gds, err := NewGenjiDatastore(m)
+	assert.NoError(t, err)
+	err2 := gds.AddEstimate("12345678901234567890123456789012", "", 0.0, 0.0)
+	assert.Errorf(t, err2, "ID should not be empty")
+}
+
+func TestAddEstimateToWorkPackageFailsDueToWrongTokenLength(t *testing.T) {
+	setupAndTearDown := setupTestCaseForMock(t)
+	defer setupAndTearDown(t)
+	m.On("Exec", "CREATE TABLE sessions").Return(nil)
+	gds, err := NewGenjiDatastore(m)
+	assert.NoError(t, err)
+	err2 := gds.AddEstimate("1234567890123456789012345678901212", "01", 0.0, 0.0)
+	assert.Errorf(t, err2, "Session token does not match desired length")
+}
+
+func TestAddEstimateToWorkPackageFailsDueToIncorrectEffort(t *testing.T) {
+	setupAndTearDown := setupTestCaseForMock(t)
+	defer setupAndTearDown(t)
+	m.On("Exec", "CREATE TABLE sessions").Return(nil)
+	gds, err := NewGenjiDatastore(m)
+	assert.NoError(t, err)
+	err2 := gds.AddEstimate("12345678901234567890123456789012", "01", -0.1, 0.0)
+	assert.Errorf(t, err2, "Effort < 0 not allowed")
+}
+
+func TestAddEstimateToWorkPackageFailsDueToIncorrectStandardDeviation(t *testing.T) {
+	setupAndTearDown := setupTestCaseForMock(t)
+	defer setupAndTearDown(t)
+	m.On("Exec", "CREATE TABLE sessions").Return(nil)
+	gds, err := NewGenjiDatastore(m)
+	assert.NoError(t, err)
+	err2 := gds.AddEstimate("12345678901234567890123456789012", "01", 0.1, -0.1)
+	assert.Errorf(t, err2, "Standard deviation < 0 not allowed")
+}
+
+func TestAddEstimateToWorkPackageFailsDueToNonExistingSessionWithRealDB(t *testing.T) {
+	setupAndTearDown := setupTestCaseForRealDB(t)
+	defer setupAndTearDown(t)
+	gds, err := NewGenjiDatastore(db)
+	assert.NoError(t, err)
+	_, err2 := gds.CreateSession()
+	assert.NoError(t, err2)
+	err3 := gds.AddEstimate("12345678901234567890123456789012", "01", 0.0, 0.0)
+	assert.Errorf(t, err3, "Specified session does not exist")
+}
+
+func TestAddEstimateToWorkPackageErrorWhileTryingToAddEstimateToNonExistingWorkPackageWithRealDB(t *testing.T) {
+	setupAndTearDown := setupTestCaseForRealDB(t)
+	defer setupAndTearDown(t)
+	gds, err := NewGenjiDatastore(db)
+	assert.NoError(t, err)
+	token, err2 := gds.CreateSession()
+	assert.NoError(t, err2)
+	err3 := gds.AddEstimate(token, "01", 1.5, 0.2)
+	assert.Errorf(t, err3, "Work package with ID: 01 does not exist")
+}
+
+func TestAddEstimateToSessionSuccessWithRealDB(t *testing.T) {
+	setupAndTearDown := setupTestCaseForRealDB(t)
+	defer setupAndTearDown(t)
+	gds, err := NewGenjiDatastore(db)
+	assert.NoError(t, err)
+	token, err2 := gds.CreateSession()
+	assert.NoError(t, err2)
+	err3 := gds.AddWorkPackage(token, "01", "eat honey")
+	assert.NoError(t, err3)
+	err4 := gds.AddEstimate(token, "01", 1.5, 0.2)
+	assert.NoError(t, err4)
 }
