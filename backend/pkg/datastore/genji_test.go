@@ -556,3 +556,68 @@ func TestAddEstimateToSessionSuccessWithRealDB(t *testing.T) {
 	err4 := gds.AddEstimate(token, "01", 1.5, 0.2)
 	assert.NoError(t, err4)
 }
+
+func TestRemoveEstimateFromWorkPackageFailsDueToEmptyID(t *testing.T) {
+	setupAndTearDown := setupTestCaseForMock(t)
+	defer setupAndTearDown(t)
+	m.On("Exec", "CREATE TABLE sessions").Return(nil)
+	gds, err := NewGenjiDatastore(m)
+	assert.NoError(t, err)
+	err2 := gds.RemoveEstimate("12345678901234567890123456789012", "")
+	assert.Errorf(t, err2, "ID should not be empty")
+}
+
+func TestRemoveEstimateFromWorkPackageFailsDueToWrongTokenLength(t *testing.T) {
+	setupAndTearDown := setupTestCaseForMock(t)
+	defer setupAndTearDown(t)
+	m.On("Exec", "CREATE TABLE sessions").Return(nil)
+	gds, err := NewGenjiDatastore(m)
+	assert.NoError(t, err)
+	err2 := gds.RemoveEstimate("1234567890123456789012345678901212", "01")
+	assert.Errorf(t, err2, "Session token does not match desired length")
+}
+
+func TestRemoveEstimateFromWorkPackageFailsDueToNonExistingSessionWithRealDB(t *testing.T) {
+	setupAndTearDown := setupTestCaseForRealDB(t)
+	defer setupAndTearDown(t)
+	gds, err := NewGenjiDatastore(db)
+	assert.NoError(t, err)
+	_, err2 := gds.CreateSession()
+	assert.NoError(t, err2)
+	err3 := gds.RemoveEstimate("12345678901234567890123456789012", "01")
+	assert.Errorf(t, err3, "Specified session does not exist")
+}
+
+func TestRemoveEstimateFromWorkPackageErrorWhileTryingToRemoveEstimateFromNonExistingWorkPackageWithRealDB(t *testing.T) {
+	setupAndTearDown := setupTestCaseForRealDB(t)
+	defer setupAndTearDown(t)
+	gds, err := NewGenjiDatastore(db)
+	assert.NoError(t, err)
+	token, err2 := gds.CreateSession()
+	assert.NoError(t, err2)
+	err3 := gds.RemoveEstimate(token, "01")
+	assert.Errorf(t, err3, "Work package with ID: 01 does not exist")
+}
+
+func TestRemoveEstimateFromSessionSuccessWithRealDB(t *testing.T) {
+	setupAndTearDown := setupTestCaseForRealDB(t)
+	defer setupAndTearDown(t)
+	gds, err := NewGenjiDatastore(db)
+	assert.NoError(t, err)
+	token, err2 := gds.CreateSession()
+	assert.NoError(t, err2)
+	err3 := gds.AddWorkPackage(token, "01", "eat honey")
+	assert.NoError(t, err3)
+	err4 := gds.AddEstimate(token, "01", 1.5, 0.2)
+	assert.NoError(t, err4)
+	wps, err5 := gds.GetWorkPackages(token)
+	assert.NoError(t, err5)
+	assert.Equal(t, 1.5, wps[0].Effort)
+	assert.Equal(t, 0.2, wps[0].StandardDeviation)
+	err6 := gds.RemoveEstimate(token, "01")
+	assert.NoError(t, err6)
+	wps2, err7 := gds.GetWorkPackages(token)
+	assert.NoError(t, err7)
+	assert.Equal(t, 0.0, wps2[0].Effort)
+	assert.Equal(t, 0.0, wps2[0].StandardDeviation)
+}

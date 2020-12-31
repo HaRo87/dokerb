@@ -218,6 +218,9 @@ func (g GenjiDatastore) RemoveWorkPackage(token, id string) error {
 	return err
 }
 
+// AddEstimate adds provided effort and standard deviation estimates
+// to the work package specified by the given id assigned to a specific
+// session identified by the given token
 func (g GenjiDatastore) AddEstimate(token, id string, effort, standardDeviation float64) error {
 	if len(token) != defaultTokenLength {
 		return fmt.Errorf("Session token does not match desired length")
@@ -249,10 +252,11 @@ func (g GenjiDatastore) AddEstimate(token, id string, effort, standardDeviation 
 		return fmt.Errorf("Work package with ID: %s does not exist", id)
 	}
 
-	for _, elem := range wps {
+	for i, elem := range wps {
 		if elem.ID == id {
 			elem.Effort = effort
 			elem.StandardDeviation = standardDeviation
+			wps[i] = elem
 			break
 		}
 	}
@@ -262,8 +266,46 @@ func (g GenjiDatastore) AddEstimate(token, id string, effort, standardDeviation 
 	return err
 }
 
+// RemoveEstimate removes the effort and standard deviation estimates from
+// a specified work packages by the given id assigned to a specific
+// session identified by the given token
 func (g GenjiDatastore) RemoveEstimate(token, id string) error {
-	return nil
+	if len(token) != defaultTokenLength {
+		return fmt.Errorf("Session token does not match desired length")
+	}
+	if id == "" {
+		return fmt.Errorf("ID should not be empty")
+	}
+
+	se, err := sessionExists(token)
+	if !se {
+		return fmt.Errorf("Specified session does not exist")
+	}
+
+	var wps []WorkPackage
+
+	wps, err = getWorkpackagesFromSession(token)
+
+	if err != nil {
+		return fmt.Errorf("Unable to get workpackages from session")
+	}
+
+	if !workpackageExists(wps, id) {
+		return fmt.Errorf("Work package with ID: %s does not exist", id)
+	}
+
+	for i, elem := range wps {
+		if elem.ID == id {
+			elem.Effort = 0.0
+			elem.StandardDeviation = 0.0
+			wps[i] = elem
+			break
+		}
+	}
+
+	err = si.db.Exec("UPDATE sessions SET workpackages = ? WHERE token = ?", wps, token)
+
+	return err
 }
 
 // GetUsers returns all users of a given session
