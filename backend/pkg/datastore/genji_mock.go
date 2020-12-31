@@ -23,6 +23,7 @@ func (m *MockGenjiDB) Query(q string, args ...interface{}) (*query.Result, error
 	return arguments.Get(0).(*query.Result), arguments.Error(1)
 }
 
+// Update implements the GenjiDB interface
 func (m *MockGenjiDB) Update(fn func(tx *genji.Tx) error) error {
 	arguments := m.Called(fn)
 	return arguments.Error(0)
