@@ -1,9 +1,12 @@
 package apiserver
 
-import "github.com/gofiber/fiber/v2"
+import (
+	"github.com/gofiber/fiber/v2"
+	"github.com/haro87/dokerb/pkg/datastore"
+)
 
 // Routes list of the available routes for project
-func Routes(app *fiber.App) {
+func Routes(app *fiber.App, store datastore.DataStore) {
 	// Create group for API routes
 	APIGroup := app.Group("/api")
 
@@ -29,6 +32,25 @@ func Routes(app *fiber.App) {
 		}
 
 		// Set 200 OK status and return JSON
+		return c.Status(200).JSON(data)
+	})
+
+	APIGroup.Post("/sessions", func(c *fiber.Ctx) error {
+		t, e := store.CreateSession()
+
+		var data fiber.Map
+
+		if e != nil {
+			data = fiber.Map{
+				"message": e,
+			}
+			return c.Status(500).JSON(data)
+		}
+
+		data = fiber.Map{
+			"message": "ok",
+			"token":   t,
+		}
 		return c.Status(200).JSON(data)
 	})
 }

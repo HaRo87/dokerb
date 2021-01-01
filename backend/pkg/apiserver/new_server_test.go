@@ -1,11 +1,13 @@
 package apiserver
 
 import (
-	"net/http"
-	"testing"
-
 	"github.com/gofiber/fiber/v2"
+	"github.com/haro87/dokerb/pkg/datastore"
 	"github.com/stretchr/testify/assert"
+	"io/ioutil"
+	"net/http"
+	"os"
+	"testing"
 )
 
 func TestAPIRoutes(t *testing.T) {
@@ -67,14 +69,20 @@ func TestAPIRoutes(t *testing.T) {
 		},
 	}
 
+	td, _ := ioutil.TempDir("", "db-test")
+
+	m := new(datastore.MockGenjiDB)
+	m.On("Exec", "CREATE TABLE sessions").Return(nil)
 	// Start the app as it is done in the main function
 	app1 := NewServer(&Config{
-		Static: static{Prefix: "/public", Path: "../../static"},
-	}).Start()
+		Database: database{Location: td + "/my.db"},
+		Static:   static{Prefix: "/public", Path: "../../static"},
+	}, m).Start()
 
 	app2 := NewServer(&Config{
-		Static: static{Prefix: "/", Path: "../../static"},
-	}).Start()
+		Database: database{Location: td + "/my-second.db"},
+		Static:   static{Prefix: "/", Path: "../../static"},
+	}, m).Start()
 
 	// Needed routes
 	app1.Get("/hello-test", func(c *fiber.Ctx) error {
@@ -134,4 +142,6 @@ func TestAPIRoutes(t *testing.T) {
 		// Verify if the status code is as expected
 		assert.Equalf(t, test.expectedCode, res2.StatusCode, test.description)
 	}
+
+	os.RemoveAll(td)
 }

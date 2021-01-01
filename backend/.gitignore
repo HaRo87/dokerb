@@ -17,3 +17,5 @@
 
 # Taskfile
 .task/
+
+*.db

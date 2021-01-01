@@ -5,10 +5,7 @@ server:
 
 # Database config
 database:
-  host: 127.0.0.1
-  port: 5432
-  username: postgres
-  password: 1234
+  location: my.db
 
 # Static files config
 static:

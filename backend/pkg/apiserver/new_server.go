@@ -1,22 +1,24 @@
 package apiserver
 
 import (
-	"os"
-
 	"github.com/gofiber/fiber/v2"
 	cors "github.com/gofiber/fiber/v2/middleware/cors"
 	logger "github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/haro87/dokerb/pkg/datastore"
+	"os"
 )
 
 // APIServer struct
 type APIServer struct {
 	config *Config
+	db     datastore.GenjiDB
 }
 
 // NewServer method for init new server instance
-func NewServer(config *Config) *APIServer {
+func NewServer(config *Config, db datastore.GenjiDB) *APIServer {
 	return &APIServer{
 		config: config,
+		db:     db,
 	}
 }
 
@@ -43,8 +45,13 @@ func (s *APIServer) Start() *fiber.App {
 		app.Static(s.config.Static.Prefix, s.config.Static.Path)
 	}
 
+	gds, gerr := datastore.NewGenjiDatastore(s.db)
+	if gerr != nil {
+		panic("Unable to create new datastore")
+	}
+
 	// Register API routes
-	Routes(app)
+	Routes(app, gds)
 
 	return app
 }
