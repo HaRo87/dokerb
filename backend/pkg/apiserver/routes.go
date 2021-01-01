@@ -5,6 +5,12 @@ import (
 	"github.com/haro87/dokerb/pkg/datastore"
 )
 
+// WorkPackage represents a work package
+type WorkPackage struct {
+	ID      string
+	Summary string
+}
+
 // Routes list of the available routes for project
 func Routes(app *fiber.App, store datastore.DataStore) {
 	// Create group for API routes
@@ -51,6 +57,36 @@ func Routes(app *fiber.App, store datastore.DataStore) {
 		return c.Status(200).JSON(data)
 	})
 
+	APIGroup.Delete("/sessions/:token", func(c *fiber.Ctx) error {
+		if err := store.RemoveSession(c.Params("token")); err != nil {
+			data := fiber.Map{
+				"message": "error",
+				"reason":  err.Error(),
+			}
+			return c.Status(500).JSON(data)
+		}
+
+		data := fiber.Map{
+			"message": "ok",
+		}
+		return c.Status(200).JSON(data)
+	})
+
+	APIGroup.Post("/sessions/:token/users/:name", func(c *fiber.Ctx) error {
+		if err := store.JoinSession(c.Params("token"), c.Params("name")); err != nil {
+			data := fiber.Map{
+				"message": "error",
+				"reason":  err.Error(),
+			}
+			return c.Status(500).JSON(data)
+		}
+
+		data := fiber.Map{
+			"message": "ok",
+		}
+		return c.Status(200).JSON(data)
+	})
+
 	APIGroup.Get("/sessions/:token/users", func(c *fiber.Ctx) error {
 		u, e := store.GetUsers(c.Params("token"))
 
@@ -71,8 +107,23 @@ func Routes(app *fiber.App, store datastore.DataStore) {
 		return c.Status(200).JSON(data)
 	})
 
-	APIGroup.Post("/sessions/:token/users/:name", func(c *fiber.Ctx) error {
-		e := store.JoinSession(c.Params("token"), c.Params("name"))
+	APIGroup.Delete("/sessions/:token/users/:name", func(c *fiber.Ctx) error {
+		if err := store.LeaveSession(c.Params("token"), c.Params("name")); err != nil {
+			data := fiber.Map{
+				"message": "error",
+				"reason":  err.Error(),
+			}
+			return c.Status(500).JSON(data)
+		}
+
+		data := fiber.Map{
+			"message": "ok",
+		}
+		return c.Status(200).JSON(data)
+	})
+
+	APIGroup.Get("/sessions/:token/workpackages", func(c *fiber.Ctx) error {
+		wps, e := store.GetWorkPackages(c.Params("token"))
 
 		var data fiber.Map
 
@@ -85,8 +136,50 @@ func Routes(app *fiber.App, store datastore.DataStore) {
 		}
 
 		data = fiber.Map{
+			"message":      "ok",
+			"workpackages": wps,
+		}
+		return c.Status(200).JSON(data)
+	})
+
+	APIGroup.Post("/sessions/:token/workpackages", func(c *fiber.Ctx) error {
+		wp := new(WorkPackage)
+
+		if err := c.BodyParser(wp); err != nil {
+			data := fiber.Map{
+				"message": "error",
+				"reason":  err.Error(),
+			}
+			return c.Status(400).JSON(data)
+		}
+
+		if err := store.AddWorkPackage(c.Params("token"), wp.ID, wp.Summary); err != nil {
+			data := fiber.Map{
+				"message": "error",
+				"reason":  err.Error(),
+			}
+			return c.Status(500).JSON(data)
+		}
+
+		data := fiber.Map{
 			"message": "ok",
 		}
 		return c.Status(200).JSON(data)
 	})
+
+	APIGroup.Delete("/sessions/:token/workpackages/:id", func(c *fiber.Ctx) error {
+		if err := store.RemoveWorkPackage(c.Params("token"), c.Params("id")); err != nil {
+			data := fiber.Map{
+				"message": "error",
+				"reason":  err.Error(),
+			}
+			return c.Status(500).JSON(data)
+		}
+
+		data := fiber.Map{
+			"message": "ok",
+		}
+		return c.Status(200).JSON(data)
+	})
+
 }
