@@ -11,6 +11,12 @@ type WorkPackage struct {
 	Summary string
 }
 
+// Estimate represents a work package estimate
+type Estimate struct {
+	Effort            float64
+	StandardDeviation float64
+}
+
 // Routes list of the available routes for project
 func Routes(app *fiber.App, store datastore.DataStore) {
 	// Create group for API routes
@@ -169,6 +175,46 @@ func Routes(app *fiber.App, store datastore.DataStore) {
 
 	APIGroup.Delete("/sessions/:token/workpackages/:id", func(c *fiber.Ctx) error {
 		if err := store.RemoveWorkPackage(c.Params("token"), c.Params("id")); err != nil {
+			data := fiber.Map{
+				"message": "error",
+				"reason":  err.Error(),
+			}
+			return c.Status(500).JSON(data)
+		}
+
+		data := fiber.Map{
+			"message": "ok",
+		}
+		return c.Status(200).JSON(data)
+	})
+
+	APIGroup.Post("/sessions/:token/workpackages/:id", func(c *fiber.Ctx) error {
+		es := new(Estimate)
+
+		if err := c.BodyParser(es); err != nil {
+			data := fiber.Map{
+				"message": "error",
+				"reason":  err.Error(),
+			}
+			return c.Status(400).JSON(data)
+		}
+
+		if err := store.AddEstimate(c.Params("token"), c.Params("id"), es.Effort, es.StandardDeviation); err != nil {
+			data := fiber.Map{
+				"message": "error",
+				"reason":  err.Error(),
+			}
+			return c.Status(500).JSON(data)
+		}
+
+		data := fiber.Map{
+			"message": "ok",
+		}
+		return c.Status(200).JSON(data)
+	})
+
+	APIGroup.Delete("/sessions/:token/workpackages/:id/estimate", func(c *fiber.Ctx) error {
+		if err := store.RemoveEstimate(c.Params("token"), c.Params("id")); err != nil {
 			data := fiber.Map{
 				"message": "error",
 				"reason":  err.Error(),
