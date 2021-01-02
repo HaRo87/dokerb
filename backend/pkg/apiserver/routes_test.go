@@ -14,9 +14,11 @@ import (
 	"testing"
 )
 
-type apiError struct {
-	Message string `json:"message"`
-	Reason  string `json:"reason"`
+type apiResponse struct {
+	Message string   `json:"message"`
+	Reason  string   `json:"reason"`
+	Token   string   `json:"token"`
+	Users   []string `json:"users"`
 }
 
 type mock struct {
@@ -29,7 +31,7 @@ type testCase struct {
 	Description          string
 	Route                string
 	Method               string
-	Body                 map[string]string
+	Body                 map[string]interface{}
 	ExpectedError        bool
 	ExpectedErrorMessage string
 	ExpectedCode         int
@@ -123,7 +125,7 @@ func TestAPIRoutesForErrors(t *testing.T) {
 			Description: "Adding a work package to a session fails due to wrong token length",
 			Route:       "/api/sessions/12345/workpackages",
 			Method:      "POST",
-			Body: map[string]string{
+			Body: map[string]interface{}{
 				"id": "TEST01",
 			},
 			ExpectedError:        false,
@@ -133,6 +135,25 @@ func TestAPIRoutesForErrors(t *testing.T) {
 		{
 			Description:          "Deleting a work package fails due to wrong token length",
 			Route:                "/api/sessions/12345/workpackages/TEST01",
+			Method:               "DELETE",
+			ExpectedError:        false,
+			ExpectedErrorMessage: "Session token does not match desired length",
+			ExpectedCode:         500,
+		},
+		{
+			Description: "Adding a estimates to a work package fails due to wrong token length",
+			Route:       "/api/sessions/12345/workpackages/TEST01",
+			Method:      "POST",
+			Body: map[string]interface{}{
+				"effort": 0.2,
+			},
+			ExpectedError:        false,
+			ExpectedErrorMessage: "Session token does not match desired length",
+			ExpectedCode:         500,
+		},
+		{
+			Description:          "Deleting a work package estimate fails due to wrong token length",
+			Route:                "/api/sessions/12345/workpackages/TEST01/estimate",
 			Method:               "DELETE",
 			ExpectedError:        false,
 			ExpectedErrorMessage: "Session token does not match desired length",
@@ -177,12 +198,12 @@ func TestAPIRoutesForErrors(t *testing.T) {
 		assert.Equalf(t, test.ExpectedError, err != nil, test.Description)
 
 		if test.ExpectedErrorMessage != "" {
-			var ae apiError
+			var ar apiResponse
 			decoder := json.NewDecoder(res.Body)
-			derr := decoder.Decode(&ae)
+			derr := decoder.Decode(&ar)
 			assert.NoError(t, derr)
-			assert.Equal(t, "error", ae.Message)
-			assert.Equal(t, test.ExpectedErrorMessage, ae.Reason)
+			assert.Equal(t, "error", ar.Message)
+			assert.Equal(t, test.ExpectedErrorMessage, ar.Reason)
 		}
 
 		if test.ExpectedError {
@@ -191,4 +212,366 @@ func TestAPIRoutesForErrors(t *testing.T) {
 
 		assert.Equalf(t, test.ExpectedCode, res.StatusCode, test.Description)
 	}
+}
+
+func TestSessionGetsCreatedSuccess(t *testing.T) {
+	setupAndTearDown := setupTestCaseForRealDB(t)
+	defer setupAndTearDown(t)
+
+	app := NewServer(&Config{
+		Static: static{Prefix: "/public", Path: "../../static"},
+	}, db).Start()
+
+	req, _ := http.NewRequest(
+		"POST",
+		"/api/sessions",
+		nil,
+	)
+
+	res, err := app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	var ar apiResponse
+	decoder := json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+	assert.Len(t, ar.Token, 32)
+}
+
+func TestDeleteSessionSuccess(t *testing.T) {
+	setupAndTearDown := setupTestCaseForRealDB(t)
+	defer setupAndTearDown(t)
+
+	app := NewServer(&Config{
+		Static: static{Prefix: "/public", Path: "../../static"},
+	}, db).Start()
+
+	req, _ := http.NewRequest(
+		"POST",
+		"/api/sessions",
+		nil,
+	)
+
+	res, err := app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	var ar apiResponse
+	decoder := json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+	token := ar.Token
+
+	req, _ = http.NewRequest(
+		"DELETE",
+		"/api/sessions/"+token,
+		nil,
+	)
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+}
+
+func TestAddUserToSessionSuccess(t *testing.T) {
+	setupAndTearDown := setupTestCaseForRealDB(t)
+	defer setupAndTearDown(t)
+
+	app := NewServer(&Config{
+		Static: static{Prefix: "/public", Path: "../../static"},
+	}, db).Start()
+
+	req, _ := http.NewRequest(
+		"POST",
+		"/api/sessions",
+		nil,
+	)
+
+	res, err := app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	var ar apiResponse
+	decoder := json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+	token := ar.Token
+
+	req, _ = http.NewRequest(
+		"POST",
+		"/api/sessions/"+token+"/users/Tigger",
+		nil,
+	)
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+
+	req, _ = http.NewRequest(
+		"GET",
+		"/api/sessions/"+token+"/users",
+		nil,
+	)
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+	assert.Contains(t, ar.Users, "Tigger")
+	assert.Len(t, ar.Users, 1)
+}
+
+func TestAddUserToSessionFailsDueToUserExists(t *testing.T) {
+	setupAndTearDown := setupTestCaseForRealDB(t)
+	defer setupAndTearDown(t)
+
+	app := NewServer(&Config{
+		Static: static{Prefix: "/public", Path: "../../static"},
+	}, db).Start()
+
+	req, _ := http.NewRequest(
+		"POST",
+		"/api/sessions",
+		nil,
+	)
+
+	res, err := app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	var ar apiResponse
+	decoder := json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+	token := ar.Token
+
+	req, _ = http.NewRequest(
+		"POST",
+		"/api/sessions/"+token+"/users/Tigger",
+		nil,
+	)
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+
+	req, _ = http.NewRequest(
+		"POST",
+		"/api/sessions/"+token+"/users/Tigger",
+		nil,
+	)
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "error", ar.Message)
+	assert.Equal(t, "User with name: Tigger already part of session", ar.Reason)
+}
+
+func TestAddMultipleUsersToSessionSuccess(t *testing.T) {
+	setupAndTearDown := setupTestCaseForRealDB(t)
+	defer setupAndTearDown(t)
+
+	app := NewServer(&Config{
+		Static: static{Prefix: "/public", Path: "../../static"},
+	}, db).Start()
+
+	req, _ := http.NewRequest(
+		"POST",
+		"/api/sessions",
+		nil,
+	)
+
+	res, err := app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	var ar apiResponse
+	decoder := json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+	token := ar.Token
+
+	req, _ = http.NewRequest(
+		"POST",
+		"/api/sessions/"+token+"/users/Tigger",
+		nil,
+	)
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+
+	req, _ = http.NewRequest(
+		"POST",
+		"/api/sessions/"+token+"/users/Rabbit",
+		nil,
+	)
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+
+	req, _ = http.NewRequest(
+		"GET",
+		"/api/sessions/"+token+"/users",
+		nil,
+	)
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+	assert.Contains(t, ar.Users, "Tigger")
+	assert.Contains(t, ar.Users, "Rabbit")
+	assert.Len(t, ar.Users, 2)
+}
+
+func TestRemoveUserFromSessionSuccess(t *testing.T) {
+	setupAndTearDown := setupTestCaseForRealDB(t)
+	defer setupAndTearDown(t)
+
+	app := NewServer(&Config{
+		Static: static{Prefix: "/public", Path: "../../static"},
+	}, db).Start()
+
+	req, _ := http.NewRequest(
+		"POST",
+		"/api/sessions",
+		nil,
+	)
+
+	res, err := app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	var ar apiResponse
+	decoder := json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+	token := ar.Token
+
+	req, _ = http.NewRequest(
+		"POST",
+		"/api/sessions/"+token+"/users/Tigger",
+		nil,
+	)
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+
+	req, _ = http.NewRequest(
+		"POST",
+		"/api/sessions/"+token+"/users/Rabbit",
+		nil,
+	)
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+
+	req, _ = http.NewRequest(
+		"GET",
+		"/api/sessions/"+token+"/users",
+		nil,
+	)
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+	assert.Contains(t, ar.Users, "Tigger")
+	assert.Contains(t, ar.Users, "Rabbit")
+	assert.Len(t, ar.Users, 2)
+
+	req, _ = http.NewRequest(
+		"DELETE",
+		"/api/sessions/"+token+"/users/Rabbit",
+		nil,
+	)
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+
+	req, _ = http.NewRequest(
+		"GET",
+		"/api/sessions/"+token+"/users",
+		nil,
+	)
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+	assert.Contains(t, ar.Users, "Tigger")
+	assert.Len(t, ar.Users, 1)
 }
