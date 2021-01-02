@@ -1,6 +1,7 @@
 package apiserver
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -28,6 +29,7 @@ type testCase struct {
 	Description          string
 	Route                string
 	Method               string
+	Body                 map[string]string
 	ExpectedError        bool
 	ExpectedErrorMessage string
 	ExpectedCode         int
@@ -117,22 +119,25 @@ func TestAPIRoutesForErrors(t *testing.T) {
 			ExpectedErrorMessage: "Session token does not match desired length",
 			ExpectedCode:         500,
 		},
-		// {
-		// 	Description:          "Adding a work package to a session fails due to wrong token length",
-		// 	Route:                "/api/sessions/12345/workpackages/TEST01",
-		// 	Method:               "POST",
-		// 	ExpectedError:        false,
-		// 	ExpectedErrorMessage: "Session token does not match desired length",
-		// 	ExpectedCode:         500,
-		// },
-		// {
-		// 	Description:          "Deleting a work package fails due to wrong token length",
-		// 	Route:                "/api/sessions/12345/workpackages/TEST01",
-		// 	Method:               "DELETE",
-		// 	ExpectedError:        false,
-		// 	ExpectedErrorMessage: "Session token does not match desired length",
-		// 	ExpectedCode:         500,
-		// },
+		{
+			Description: "Adding a work package to a session fails due to wrong token length",
+			Route:       "/api/sessions/12345/workpackages",
+			Method:      "POST",
+			Body: map[string]string{
+				"id": "TEST01",
+			},
+			ExpectedError:        false,
+			ExpectedErrorMessage: "Session token does not match desired length",
+			ExpectedCode:         500,
+		},
+		{
+			Description:          "Deleting a work package fails due to wrong token length",
+			Route:                "/api/sessions/12345/workpackages/TEST01",
+			Method:               "DELETE",
+			ExpectedError:        false,
+			ExpectedErrorMessage: "Session token does not match desired length",
+			ExpectedCode:         500,
+		},
 	}
 
 	m.On("Exec", "CREATE TABLE sessions").Return(nil)
@@ -142,11 +147,24 @@ func TestAPIRoutesForErrors(t *testing.T) {
 	}, m).Start()
 
 	for _, test := range testCases {
-		req, _ := http.NewRequest(
-			test.Method,
-			test.Route,
-			nil,
-		)
+		var req *http.Request
+
+		if len(test.Body) > 0 {
+			body, me := json.Marshal(test.Body)
+			assert.NoError(t, me)
+			req, _ = http.NewRequest(
+				test.Method,
+				test.Route,
+				bytes.NewBuffer(body),
+			)
+			req.Header.Set("Content-Type", "application/json")
+		} else {
+			req, _ = http.NewRequest(
+				test.Method,
+				test.Route,
+				nil,
+			)
+		}
 
 		if len(test.Mock) > 0 {
 			for _, moc := range test.Mock {
