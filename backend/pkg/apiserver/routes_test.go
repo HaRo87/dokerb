@@ -14,11 +14,19 @@ import (
 	"testing"
 )
 
+type workPackage struct {
+	ID                string  `json:"id"`
+	Summary           string  `json:"summary"`
+	Effort            float64 `json:"effort"`
+	StandardDeviation float64 `json:"standarddeviation"`
+}
+
 type apiResponse struct {
-	Message string   `json:"message"`
-	Reason  string   `json:"reason"`
-	Token   string   `json:"token"`
-	Users   []string `json:"users"`
+	Message      string        `json:"message"`
+	Reason       string        `json:"reason"`
+	Token        string        `json:"token"`
+	Users        []string      `json:"users"`
+	Workpackages []workPackage `json:"workpackages"`
 }
 
 type mock struct {
@@ -143,7 +151,7 @@ func TestAPIRoutesForErrors(t *testing.T) {
 		{
 			Description: "Adding a estimates to a work package fails due to wrong token length",
 			Route:       "/api/sessions/12345/workpackages/TEST01",
-			Method:      "POST",
+			Method:      "PUT",
 			Body: map[string]interface{}{
 				"effort": 0.2,
 			},
@@ -574,4 +582,430 @@ func TestRemoveUserFromSessionSuccess(t *testing.T) {
 	assert.Equal(t, "ok", ar.Message)
 	assert.Contains(t, ar.Users, "Tigger")
 	assert.Len(t, ar.Users, 1)
+}
+
+func TestAddWorkPackagesToSessionSuccess(t *testing.T) {
+	setupAndTearDown := setupTestCaseForRealDB(t)
+	defer setupAndTearDown(t)
+
+	app := NewServer(&Config{
+		Static: static{Prefix: "/public", Path: "../../static"},
+	}, db).Start()
+
+	req, _ := http.NewRequest(
+		"POST",
+		"/api/sessions",
+		nil,
+	)
+
+	res, err := app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	var ar apiResponse
+	decoder := json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+	token := ar.Token
+
+	payload := map[string]string{
+		"id": "TEST01",
+	}
+	body, me := json.Marshal(payload)
+
+	assert.NoError(t, me)
+
+	req, _ = http.NewRequest(
+		"POST",
+		"/api/sessions/"+token+"/workpackages",
+		bytes.NewBuffer(body),
+	)
+	req.Header.Set("Content-Type", "application/json")
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+
+	payload = map[string]string{
+		"id":      "TEST02",
+		"summary": "some test",
+	}
+	body, me = json.Marshal(payload)
+
+	assert.NoError(t, me)
+
+	req, _ = http.NewRequest(
+		"POST",
+		"/api/sessions/"+token+"/workpackages",
+		bytes.NewBuffer(body),
+	)
+	req.Header.Set("Content-Type", "application/json")
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+
+	req, _ = http.NewRequest(
+		"GET",
+		"/api/sessions/"+token+"/workpackages",
+		nil,
+	)
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+	assert.Equal(t, "TEST01", ar.Workpackages[0].ID)
+	assert.Empty(t, ar.Workpackages[0].Summary)
+	assert.Equal(t, "TEST02", ar.Workpackages[1].ID)
+	assert.Equal(t, "some test", ar.Workpackages[1].Summary)
+	assert.Len(t, ar.Workpackages, 2)
+}
+
+func TestRemoveWorkPackageFromSessionSuccess(t *testing.T) {
+	setupAndTearDown := setupTestCaseForRealDB(t)
+	defer setupAndTearDown(t)
+
+	app := NewServer(&Config{
+		Static: static{Prefix: "/public", Path: "../../static"},
+	}, db).Start()
+
+	req, _ := http.NewRequest(
+		"POST",
+		"/api/sessions",
+		nil,
+	)
+
+	res, err := app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	var ar apiResponse
+	decoder := json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+	token := ar.Token
+
+	payload := map[string]string{
+		"id": "TEST01",
+	}
+	body, me := json.Marshal(payload)
+
+	assert.NoError(t, me)
+
+	req, _ = http.NewRequest(
+		"POST",
+		"/api/sessions/"+token+"/workpackages",
+		bytes.NewBuffer(body),
+	)
+	req.Header.Set("Content-Type", "application/json")
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+
+	payload = map[string]string{
+		"id":      "TEST02",
+		"summary": "some test",
+	}
+	body, me = json.Marshal(payload)
+
+	assert.NoError(t, me)
+
+	req, _ = http.NewRequest(
+		"POST",
+		"/api/sessions/"+token+"/workpackages",
+		bytes.NewBuffer(body),
+	)
+	req.Header.Set("Content-Type", "application/json")
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+
+	req, _ = http.NewRequest(
+		"GET",
+		"/api/sessions/"+token+"/workpackages",
+		nil,
+	)
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+	assert.Equal(t, "TEST01", ar.Workpackages[0].ID)
+	assert.Empty(t, ar.Workpackages[0].Summary)
+	assert.Equal(t, "TEST02", ar.Workpackages[1].ID)
+	assert.Equal(t, "some test", ar.Workpackages[1].Summary)
+	assert.Len(t, ar.Workpackages, 2)
+
+	req, _ = http.NewRequest(
+		"DELETE",
+		"/api/sessions/"+token+"/workpackages/TEST01",
+		nil,
+	)
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+
+	req, _ = http.NewRequest(
+		"GET",
+		"/api/sessions/"+token+"/workpackages",
+		nil,
+	)
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+	assert.Equal(t, "TEST02", ar.Workpackages[0].ID)
+	assert.Equal(t, "some test", ar.Workpackages[0].Summary)
+	assert.Len(t, ar.Workpackages, 1)
+}
+
+func TestAddAndRemoveEstimateToFromWorkPackageSuccess(t *testing.T) {
+	setupAndTearDown := setupTestCaseForRealDB(t)
+	defer setupAndTearDown(t)
+
+	app := NewServer(&Config{
+		Static: static{Prefix: "/public", Path: "../../static"},
+	}, db).Start()
+
+	req, _ := http.NewRequest(
+		"POST",
+		"/api/sessions",
+		nil,
+	)
+
+	res, err := app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	var ar apiResponse
+	decoder := json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+	token := ar.Token
+
+	payload := map[string]string{
+		"id": "TEST01",
+	}
+	body, me := json.Marshal(payload)
+
+	assert.NoError(t, me)
+
+	req, _ = http.NewRequest(
+		"POST",
+		"/api/sessions/"+token+"/workpackages",
+		bytes.NewBuffer(body),
+	)
+	req.Header.Set("Content-Type", "application/json")
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+
+	payload = map[string]string{
+		"id":      "TEST02",
+		"summary": "some test",
+	}
+	body, me = json.Marshal(payload)
+
+	assert.NoError(t, me)
+
+	req, _ = http.NewRequest(
+		"POST",
+		"/api/sessions/"+token+"/workpackages",
+		bytes.NewBuffer(body),
+	)
+	req.Header.Set("Content-Type", "application/json")
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+
+	req, _ = http.NewRequest(
+		"GET",
+		"/api/sessions/"+token+"/workpackages",
+		nil,
+	)
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+	assert.Equal(t, "TEST01", ar.Workpackages[0].ID)
+	assert.Empty(t, ar.Workpackages[0].Summary)
+	assert.Equal(t, 0.0, ar.Workpackages[0].Effort)
+	assert.Equal(t, 0.0, ar.Workpackages[0].StandardDeviation)
+	assert.Equal(t, "TEST02", ar.Workpackages[1].ID)
+	assert.Equal(t, "some test", ar.Workpackages[1].Summary)
+	assert.Equal(t, 0.0, ar.Workpackages[1].Effort)
+	assert.Equal(t, 0.0, ar.Workpackages[1].StandardDeviation)
+	assert.Len(t, ar.Workpackages, 2)
+
+	payloadf := map[string]float64{
+		"effort": 1.5,
+	}
+	body, me = json.Marshal(payloadf)
+
+	assert.NoError(t, me)
+
+	req, _ = http.NewRequest(
+		"PUT",
+		"/api/sessions/"+token+"/workpackages/TEST01",
+		bytes.NewBuffer(body),
+	)
+	req.Header.Set("Content-Type", "application/json")
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+
+	payloadf = map[string]float64{
+		"effort":            3.7,
+		"standarddeviation": 0.2,
+	}
+	body, me = json.Marshal(payloadf)
+
+	assert.NoError(t, me)
+
+	req, _ = http.NewRequest(
+		"PUT",
+		"/api/sessions/"+token+"/workpackages/TEST02",
+		bytes.NewBuffer(body),
+	)
+	req.Header.Set("Content-Type", "application/json")
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+
+	req, _ = http.NewRequest(
+		"GET",
+		"/api/sessions/"+token+"/workpackages",
+		nil,
+	)
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+	assert.Equal(t, "TEST01", ar.Workpackages[0].ID)
+	assert.Empty(t, ar.Workpackages[0].Summary)
+	assert.Equal(t, 1.5, ar.Workpackages[0].Effort)
+	assert.Equal(t, 0.0, ar.Workpackages[0].StandardDeviation)
+	assert.Equal(t, "TEST02", ar.Workpackages[1].ID)
+	assert.Equal(t, "some test", ar.Workpackages[1].Summary)
+	assert.Equal(t, 3.7, ar.Workpackages[1].Effort)
+	assert.Equal(t, 0.2, ar.Workpackages[1].StandardDeviation)
+	assert.Len(t, ar.Workpackages, 2)
+
+	req, _ = http.NewRequest(
+		"DELETE",
+		"/api/sessions/"+token+"/workpackages/TEST02/estimate",
+		nil,
+	)
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+
+	req, _ = http.NewRequest(
+		"GET",
+		"/api/sessions/"+token+"/workpackages",
+		nil,
+	)
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+	assert.Equal(t, "TEST01", ar.Workpackages[0].ID)
+	assert.Empty(t, ar.Workpackages[0].Summary)
+	assert.Equal(t, 1.5, ar.Workpackages[0].Effort)
+	assert.Equal(t, 0.0, ar.Workpackages[0].StandardDeviation)
+	assert.Equal(t, "TEST02", ar.Workpackages[1].ID)
+	assert.Equal(t, "some test", ar.Workpackages[1].Summary)
+	assert.Equal(t, 0.0, ar.Workpackages[1].Effort)
+	assert.Equal(t, 0.0, ar.Workpackages[1].StandardDeviation)
+	assert.Len(t, ar.Workpackages, 2)
 }

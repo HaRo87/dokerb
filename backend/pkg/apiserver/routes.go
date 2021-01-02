@@ -188,7 +188,7 @@ func Routes(app *fiber.App, store datastore.DataStore) {
 		return c.Status(200).JSON(data)
 	})
 
-	APIGroup.Post("/sessions/:token/workpackages/:id", func(c *fiber.Ctx) error {
+	APIGroup.Put("/sessions/:token/workpackages/:id", func(c *fiber.Ctx) error {
 		es := new(Estimate)
 
 		if err := c.BodyParser(es); err != nil {
