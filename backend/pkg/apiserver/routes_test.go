@@ -677,6 +677,56 @@ func TestAddWorkPackagesToSessionSuccess(t *testing.T) {
 	assert.Len(t, ar.Workpackages, 2)
 }
 
+func TestAddWorkPackageToSessionFailsDueToMissingHeader(t *testing.T) {
+	setupAndTearDown := setupTestCaseForRealDB(t)
+	defer setupAndTearDown(t)
+
+	app := NewServer(&Config{
+		Static: static{Prefix: "/public", Path: "../../static"},
+	}, db).Start()
+
+	req, _ := http.NewRequest(
+		"POST",
+		"/api/sessions",
+		nil,
+	)
+
+	res, err := app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	var ar apiResponse
+	decoder := json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+	token := ar.Token
+
+	payload := map[string]string{
+		"id": "TEST01",
+	}
+	body, me := json.Marshal(payload)
+
+	assert.NoError(t, me)
+
+	req, _ = http.NewRequest(
+		"POST",
+		"/api/sessions/"+token+"/workpackages",
+		bytes.NewBuffer(body),
+	)
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "error", ar.Message)
+	assert.Equal(t, "Unprocessable Entity", ar.Reason)
+	assert.Equal(t, 400, res.StatusCode)
+}
+
 func TestRemoveWorkPackageFromSessionSuccess(t *testing.T) {
 	setupAndTearDown := setupTestCaseForRealDB(t)
 	defer setupAndTearDown(t)
@@ -1008,4 +1058,77 @@ func TestAddAndRemoveEstimateToFromWorkPackageSuccess(t *testing.T) {
 	assert.Equal(t, 0.0, ar.Workpackages[1].Effort)
 	assert.Equal(t, 0.0, ar.Workpackages[1].StandardDeviation)
 	assert.Len(t, ar.Workpackages, 2)
+}
+
+func TestAddEstimateToWorkPackageFailsDueToMissingHeader(t *testing.T) {
+	setupAndTearDown := setupTestCaseForRealDB(t)
+	defer setupAndTearDown(t)
+
+	app := NewServer(&Config{
+		Static: static{Prefix: "/public", Path: "../../static"},
+	}, db).Start()
+
+	req, _ := http.NewRequest(
+		"POST",
+		"/api/sessions",
+		nil,
+	)
+
+	res, err := app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	var ar apiResponse
+	decoder := json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+	token := ar.Token
+
+	payload := map[string]string{
+		"id": "TEST01",
+	}
+	body, me := json.Marshal(payload)
+
+	assert.NoError(t, me)
+
+	req, _ = http.NewRequest(
+		"POST",
+		"/api/sessions/"+token+"/workpackages",
+		bytes.NewBuffer(body),
+	)
+	req.Header.Set("Content-Type", "application/json")
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+
+	payloadf := map[string]float64{
+		"effort": 1.5,
+	}
+	body, me = json.Marshal(payloadf)
+
+	assert.NoError(t, me)
+
+	req, _ = http.NewRequest(
+		"PUT",
+		"/api/sessions/"+token+"/workpackages/TEST01",
+		bytes.NewBuffer(body),
+	)
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "error", ar.Message)
+	assert.Equal(t, "Unprocessable Entity", ar.Reason)
+	assert.Equal(t, 400, res.StatusCode)
 }
