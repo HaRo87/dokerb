@@ -26,8 +26,14 @@ tasks:
   build:
     desc: Build the API server
     cmds:
+      - task: swagger
       - mkdir ./build
       - CGO_ENABLED=0 GOARCH=amd64 go build -ldflags="-w -s" -o ./build/{{.APP}} .
+
+  swagger:
+    desc: Generate the swagger documentation
+    cmds:
+      - swag init -g pkg/apiserver/routes.go
 
   run:
     desc: Build and run the API server
@@ -35,5 +41,6 @@ tasks:
       - task: clean
       - task: security
       - task: test
+      - task: swagger
       - task: build
       - ./build/{{.APP}}
