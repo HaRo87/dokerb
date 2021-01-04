@@ -33,6 +33,17 @@ definitions:
         format: string
         type: string
     type: object
+  apiserver.Estimate:
+    properties:
+      effort:
+        example: 1.5
+        format: float64
+        type: number
+      standarddeviation:
+        example: 0.2
+        format: float64
+        type: number
+    type: object
   apiserver.GeneralResponse:
     properties:
       message:
@@ -188,7 +199,6 @@ paths:
             $ref: '#/definitions/apiserver.ErrorResponse'
       summary: Get the users of an existing session
       tags:
-      - session
       - user
   /sessions/{token}/users/{name}:
     delete:
@@ -217,7 +227,6 @@ paths:
             $ref: '#/definitions/apiserver.ErrorResponse'
       summary: Remove a user from a session
       tags:
-      - session
       - user
     post:
       description: Adds a new (non-existing) user to an existing session
@@ -245,7 +254,6 @@ paths:
             $ref: '#/definitions/apiserver.ErrorResponse'
       summary: Add a new user to a existing session
       tags:
-      - session
       - user
   /sessions/{token}/workpackages:
     get:
@@ -269,7 +277,6 @@ paths:
             $ref: '#/definitions/apiserver.ErrorResponse'
       summary: Get the work packages of a session
       tags:
-      - session
       - workpackage
     post:
       description: Adds a new (non-existing) work package to an existing session
@@ -302,6 +309,99 @@ paths:
             $ref: '#/definitions/apiserver.ErrorResponse'
       summary: Add a new work package to a existing session
       tags:
-      - session
+      - workpackage
+  /sessions/{token}/workpackages/{id}:
+    delete:
+      description: Removes a existing work package from an existing session
+      parameters:
+      - description: Session Token
+        in: path
+        name: token
+        required: true
+        type: string
+      - description: ID of the work package
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apiserver.GeneralResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiserver.ErrorResponse'
+      summary: Remove a work package from a session
+      tags:
+      - workpackage
+    put:
+      description: Updates a estimate of a existing work package inside a existing
+        session
+      parameters:
+      - description: Session Token
+        in: path
+        name: token
+        required: true
+        type: string
+      - description: ID of the work package
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: New Estimate
+        in: body
+        name: estimate
+        required: true
+        schema:
+          $ref: '#/definitions/apiserver.Estimate'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apiserver.GeneralResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apiserver.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiserver.ErrorResponse'
+      summary: Update the estimate of a work package
+      tags:
+      - workpackage
+  /sessions/{token}/workpackages/{id}/estimate:
+    delete:
+      description: Removes the estimate from an existing work package
+      parameters:
+      - description: Session Token
+        in: path
+        name: token
+        required: true
+        type: string
+      - description: ID of the work package
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apiserver.GeneralResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiserver.ErrorResponse'
+      summary: Delete the estimate from a work package
+      tags:
       - workpackage
 swagger: "2.0"

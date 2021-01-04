@@ -119,7 +119,6 @@ var doc = `{
                     "application/json"
                 ],
                 "tags": [
-                    "session",
                     "user"
                 ],
                 "summary": "Get the users of an existing session",
@@ -155,7 +154,6 @@ var doc = `{
                     "application/json"
                 ],
                 "tags": [
-                    "session",
                     "user"
                 ],
                 "summary": "Add a new user to a existing session",
@@ -196,7 +194,6 @@ var doc = `{
                     "application/json"
                 ],
                 "tags": [
-                    "session",
                     "user"
                 ],
                 "summary": "Remove a user from a session",
@@ -239,7 +236,6 @@ var doc = `{
                     "application/json"
                 ],
                 "tags": [
-                    "session",
                     "workpackage"
                 ],
                 "summary": "Get the work packages of a session",
@@ -273,7 +269,6 @@ var doc = `{
                     "application/json"
                 ],
                 "tags": [
-                    "session",
                     "workpackage"
                 ],
                 "summary": "Add a new work package to a existing session",
@@ -306,6 +301,145 @@ var doc = `{
                         "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/apiserver.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apiserver.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{token}/workpackages/{id}": {
+            "put": {
+                "description": "Updates a estimate of a existing work package inside a existing session",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "workpackage"
+                ],
+                "summary": "Update the estimate of a work package",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session Token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID of the work package",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "New Estimate",
+                        "name": "estimate",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/apiserver.Estimate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apiserver.GeneralResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apiserver.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apiserver.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Removes a existing work package from an existing session",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "workpackage"
+                ],
+                "summary": "Remove a work package from a session",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session Token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID of the work package",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apiserver.GeneralResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apiserver.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{token}/workpackages/{id}/estimate": {
+            "delete": {
+                "description": "Removes the estimate from an existing work package",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "workpackage"
+                ],
+                "summary": "Delete the estimate from a work package",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session Token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID of the work package",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apiserver.GeneralResponse"
                         }
                     },
                     "500": {
@@ -362,6 +496,21 @@ var doc = `{
                     "type": "string",
                     "format": "string",
                     "example": "oops, something went wrong"
+                }
+            }
+        },
+        "apiserver.Estimate": {
+            "type": "object",
+            "properties": {
+                "effort": {
+                    "type": "number",
+                    "format": "float64",
+                    "example": 1.5
+                },
+                "standarddeviation": {
+                    "type": "number",
+                    "format": "float64",
+                    "example": 0.2
                 }
             }
         },

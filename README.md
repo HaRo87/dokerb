@@ -20,11 +20,13 @@ but using the [Delphi Method](https://en.wikipedia.org/wiki/Delphi_method) for e
 
 * [Go](https://golang.org/doc/install)
 * [Task](https://taskfile.dev/#/)
+* [Swag](https://github.com/swaggo/swag)
 
 3. This projects uses
 
 * [Fiber](https://gofiber.io/)
 * [Create Go App](https://create-go.app/)
+* [fiber-swagger](https://github.com/arsmn/fiber-swagger)
 
 4. Run project by this command from within the `backend` dir:
 
@@ -33,6 +35,12 @@ task -s
 ```
 
 > I am using `Taskfile` as task manager for running the project on a local machine by default. 
+
+Then you should be able to navigate to `http://127.0.0.1:<port>` where `port` is defined by your config
+file -> default is `5000`.
+
+This should display the general info page which also provides links to further documentation and the 
+Swagger documentation.
 
 ## ⚙️ Configuration
 
@@ -46,10 +54,7 @@ server:
 
 # Database config
 database:
-  host: 127.0.0.1
-  port: 5432
-  username: postgres
-  password: 1234
+  location: my.db
 
 # Static files config
 static:
