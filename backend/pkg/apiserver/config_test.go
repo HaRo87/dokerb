@@ -17,7 +17,7 @@ func TestNewConfig(t *testing.T) {
 			"../../configs/apiserver.yml",
 			&Config{
 				Server:   server{"0.0.0.0", "5000"},
-				Database: database{"127.0.0.1", "5432", "", ""},
+				Database: database{"my.db"},
 				Static:   static{"/", "./static"},
 			},
 			false,

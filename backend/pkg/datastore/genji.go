@@ -53,7 +53,9 @@ func NewGenjiDatastore(db GenjiDB) (DataStore, error) {
 	err := si.db.Exec("CREATE TABLE sessions")
 
 	if err != nil {
-		return nil, fmt.Errorf("Unable to create sessions table")
+		if err.Error() != "table already exists" {
+			return nil, fmt.Errorf("Unable to create sessions table")
+		}
 	}
 
 	return si, nil

@@ -21,10 +21,7 @@ type server struct {
 }
 
 type database struct {
-	Host     string `yaml:"host"`
-	Port     string `yaml:"port"`
-	Username string `yaml:"user"`
-	Password string `yaml:"pass"`
+	Location string `yaml:"location"`
 }
 
 type static struct {

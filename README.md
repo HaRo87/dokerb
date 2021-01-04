@@ -3,6 +3,9 @@
 Just looking for a pet project which can be used by me to learn something about
 [Fiber](https://gofiber.io/).
 
+![Testing Go Code](https://github.com/HaRo87/dokerb/workflows/Testing%20Go%20Code/badge.svg?branch=main&event=push)
+[![codecov](https://codecov.io/gh/HaRo87/dokerb/branch/main/graph/badge.svg?token=YNELZZ65S1)](https://codecov.io/gh/HaRo87/dokerb)
+
 <img src="https://img.shields.io/badge/Go-1.15+-00ADD8?style=for-the-badge&logo=go" alt="go version" />&nbsp;<img src="https://img.shields.io/badge/license-mit-red?style=for-the-badge&logo=none" alt="license" />
 
 The idea behind Doker is to have a web based service which
@@ -17,11 +20,13 @@ but using the [Delphi Method](https://en.wikipedia.org/wiki/Delphi_method) for e
 
 * [Go](https://golang.org/doc/install)
 * [Task](https://taskfile.dev/#/)
+* [Swag](https://github.com/swaggo/swag)
 
 3. This projects uses
 
 * [Fiber](https://gofiber.io/)
 * [Create Go App](https://create-go.app/)
+* [fiber-swagger](https://github.com/arsmn/fiber-swagger)
 
 4. Run project by this command from within the `backend` dir:
 
@@ -30,6 +35,12 @@ task -s
 ```
 
 > I am using `Taskfile` as task manager for running the project on a local machine by default. 
+
+Then you should be able to navigate to `http://127.0.0.1:<port>` where `port` is defined by your config
+file -> default is `5000`.
+
+This should display the general info page which also provides links to further documentation and the 
+Swagger documentation.
 
 ## ⚙️ Configuration
 
@@ -43,10 +54,7 @@ server:
 
 # Database config
 database:
-  host: 127.0.0.1
-  port: 5432
-  username: postgres
-  password: 1234
+  location: my.db
 
 # Static files config
 static:

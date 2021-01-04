@@ -1,11 +1,13 @@
 package main
 
 import (
+	"context"
+	"fmt"
+	"github.com/genjidb/genji"
+	"github.com/haro87/dokerb/pkg/apiserver"
 	"log"
 	"os"
 	"os/signal"
-
-	"github.com/haro87/dokerb/pkg/apiserver"
 )
 
 func main() {
@@ -16,8 +18,14 @@ func main() {
 	config, err := apiserver.NewConfig(configPath)
 	apiserver.ErrChecker(err)
 
+	db, err := genji.Open(config.Database.Location)
+	if err != nil {
+		panic(fmt.Sprintf("Unable to create new database at: %s", config.Database.Location))
+	}
+	db = db.WithContext(context.Background())
+	defer db.Close()
 	// Create new server.
-	server := apiserver.NewServer(config).Start()
+	server := apiserver.NewServer(config, db).Start()
 
 	// Create channel for idle connections.
 	idleConnsClosed := make(chan struct{})
