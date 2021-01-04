@@ -206,6 +206,114 @@ func TestRemoveUserSuccess(t *testing.T) {
 	assert.NotContains(t, l, "Tigger")
 }
 
+func TestRemoveWorkPackageFromEmptyList(t *testing.T) {
+	l, err := removeWorkpackage([]WorkPackage{}, "TEST01")
+	assert.Errorf(t, err, "Workpackage with ID: TEST01 is not part of session")
+	assert.Len(t, l, 0)
+}
+
+func TestRemoveWorkPackageFromListWithoutThatWorkPackageBeingPartOfThatList(t *testing.T) {
+	wps := []WorkPackage{
+		WorkPackage{
+			ID: "TEST01",
+		},
+		WorkPackage{
+			ID: "TEST02",
+		},
+		WorkPackage{
+			ID: "TEST03",
+		},
+	}
+	l, err := removeWorkpackage(wps, "TEST04")
+	assert.Errorf(t, err, "Workpackage with ID: TEST04 is not part of session")
+	assert.Len(t, l, 3)
+}
+
+func TestRemoveWorkPackageSuccess(t *testing.T) {
+	wps := []WorkPackage{
+		WorkPackage{
+			ID: "TEST01",
+		},
+		WorkPackage{
+			ID: "TEST02",
+		},
+		WorkPackage{
+			ID: "TEST03",
+		},
+	}
+	l, err := removeWorkpackage(wps, "TEST03")
+	assert.NoError(t, err)
+	assert.Len(t, l, 2)
+	assert.NotContains(t, l, WorkPackage{ID: "TEST03"})
+}
+
+func TestRemoveEstimateFromEmptyList(t *testing.T) {
+	l, err := removeEstimate([]Estimate{}, Estimate{WorkPackageID: "TEST01", UserName: "Tigger"})
+	assert.Errorf(t, err, "Estimate with ID: TEST01 and user name: Tigger is not part of session")
+	assert.Len(t, l, 0)
+}
+
+func TestRemoveEstimateFromListWithoutThatEstimateBeingPartOfThatListDueToIDAndUserName(t *testing.T) {
+	est := []Estimate{
+		Estimate{
+			WorkPackageID: "TEST01",
+			UserName:      "Tigger",
+		},
+		Estimate{
+			WorkPackageID: "TEST02",
+			UserName:      "Rabbit",
+		},
+		Estimate{
+			WorkPackageID: "TEST03",
+			UserName:      "Piglet",
+		},
+	}
+	l, err := removeEstimate(est, Estimate{WorkPackageID: "TEST04", UserName: "Tigger"})
+	assert.Errorf(t, err, "Estimate with ID: TEST04 and user name: Tigger is not part of session")
+	assert.Len(t, l, 3)
+}
+
+func TestRemoveEstimateFromListWithoutThatEstimateBeingPartOfThatListDueToUserName(t *testing.T) {
+	est := []Estimate{
+		Estimate{
+			WorkPackageID: "TEST01",
+			UserName:      "Tigger",
+		},
+		Estimate{
+			WorkPackageID: "TEST02",
+			UserName:      "Rabbit",
+		},
+		Estimate{
+			WorkPackageID: "TEST03",
+			UserName:      "Piglet",
+		},
+	}
+	l, err := removeEstimate(est, Estimate{WorkPackageID: "TEST01", UserName: "Piglet"})
+	assert.Errorf(t, err, "Estimate with ID: TEST01 and user name: Piglet is not part of session")
+	assert.Len(t, l, 3)
+}
+
+func TestRemoveEstimateSuccess(t *testing.T) {
+	est := []Estimate{
+		Estimate{
+			WorkPackageID: "TEST01",
+			UserName:      "Tigger",
+		},
+		Estimate{
+			WorkPackageID: "TEST02",
+			UserName:      "Rabbit",
+		},
+		Estimate{
+			WorkPackageID: "TEST03",
+			UserName:      "Piglet",
+		},
+	}
+	l, err := removeEstimate(est, Estimate{WorkPackageID: "TEST01", UserName: "Tigger"})
+	assert.NoError(t, err)
+	assert.Len(t, l, 2)
+	assert.NotContains(t, l, Estimate{WorkPackageID: "TEST01", UserName: "Tigger"})
+}
+
 func TestLeaveSessionFailsDueToEmptyName(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
@@ -488,7 +596,7 @@ func TestAddEstimateToWorkPackageFailsDueToEmptyID(t *testing.T) {
 	m.On("Exec", "CREATE TABLE sessions").Return(nil)
 	gds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
-	err2 := gds.AddEstimate("12345678901234567890123456789012", "", 0.0, 0.0)
+	err2 := gds.AddEstimateToWorkPackage("12345678901234567890123456789012", "", 0.0, 0.0)
 	assert.Errorf(t, err2, "ID should not be empty")
 }
 
@@ -498,7 +606,7 @@ func TestAddEstimateToWorkPackageFailsDueToWrongTokenLength(t *testing.T) {
 	m.On("Exec", "CREATE TABLE sessions").Return(nil)
 	gds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
-	err2 := gds.AddEstimate("1234567890123456789012345678901212", "01", 0.0, 0.0)
+	err2 := gds.AddEstimateToWorkPackage("1234567890123456789012345678901212", "01", 0.0, 0.0)
 	assert.Errorf(t, err2, "Session token does not match desired length")
 }
 
@@ -508,7 +616,7 @@ func TestAddEstimateToWorkPackageFailsDueToIncorrectEffort(t *testing.T) {
 	m.On("Exec", "CREATE TABLE sessions").Return(nil)
 	gds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
-	err2 := gds.AddEstimate("12345678901234567890123456789012", "01", -0.1, 0.0)
+	err2 := gds.AddEstimateToWorkPackage("12345678901234567890123456789012", "01", -0.1, 0.0)
 	assert.Errorf(t, err2, "Effort < 0 not allowed")
 }
 
@@ -518,7 +626,7 @@ func TestAddEstimateToWorkPackageFailsDueToIncorrectStandardDeviation(t *testing
 	m.On("Exec", "CREATE TABLE sessions").Return(nil)
 	gds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
-	err2 := gds.AddEstimate("12345678901234567890123456789012", "01", 0.1, -0.1)
+	err2 := gds.AddEstimateToWorkPackage("12345678901234567890123456789012", "01", 0.1, -0.1)
 	assert.Errorf(t, err2, "Standard deviation < 0 not allowed")
 }
 
@@ -529,7 +637,7 @@ func TestAddEstimateToWorkPackageFailsDueToNonExistingSessionWithRealDB(t *testi
 	assert.NoError(t, err)
 	_, err2 := gds.CreateSession()
 	assert.NoError(t, err2)
-	err3 := gds.AddEstimate("12345678901234567890123456789012", "01", 0.0, 0.0)
+	err3 := gds.AddEstimateToWorkPackage("12345678901234567890123456789012", "01", 0.0, 0.0)
 	assert.Errorf(t, err3, "Specified session does not exist")
 }
 
@@ -540,7 +648,7 @@ func TestAddEstimateToWorkPackageErrorWhileTryingToAddEstimateToNonExistingWorkP
 	assert.NoError(t, err)
 	token, err2 := gds.CreateSession()
 	assert.NoError(t, err2)
-	err3 := gds.AddEstimate(token, "01", 1.5, 0.2)
+	err3 := gds.AddEstimateToWorkPackage(token, "01", 1.5, 0.2)
 	assert.Errorf(t, err3, "Work package with ID: 01 does not exist")
 }
 
@@ -553,7 +661,7 @@ func TestAddEstimateToSessionSuccessWithRealDB(t *testing.T) {
 	assert.NoError(t, err2)
 	err3 := gds.AddWorkPackage(token, "01", "eat honey")
 	assert.NoError(t, err3)
-	err4 := gds.AddEstimate(token, "01", 1.5, 0.2)
+	err4 := gds.AddEstimateToWorkPackage(token, "01", 1.5, 0.2)
 	assert.NoError(t, err4)
 }
 
@@ -563,7 +671,7 @@ func TestRemoveEstimateFromWorkPackageFailsDueToEmptyID(t *testing.T) {
 	m.On("Exec", "CREATE TABLE sessions").Return(nil)
 	gds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
-	err2 := gds.RemoveEstimate("12345678901234567890123456789012", "")
+	err2 := gds.RemoveEstimateFromWorkPackage("12345678901234567890123456789012", "")
 	assert.Errorf(t, err2, "ID should not be empty")
 }
 
@@ -573,7 +681,7 @@ func TestRemoveEstimateFromWorkPackageFailsDueToWrongTokenLength(t *testing.T) {
 	m.On("Exec", "CREATE TABLE sessions").Return(nil)
 	gds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
-	err2 := gds.RemoveEstimate("1234567890123456789012345678901212", "01")
+	err2 := gds.RemoveEstimateFromWorkPackage("1234567890123456789012345678901212", "01")
 	assert.Errorf(t, err2, "Session token does not match desired length")
 }
 
@@ -584,7 +692,7 @@ func TestRemoveEstimateFromWorkPackageFailsDueToNonExistingSessionWithRealDB(t *
 	assert.NoError(t, err)
 	_, err2 := gds.CreateSession()
 	assert.NoError(t, err2)
-	err3 := gds.RemoveEstimate("12345678901234567890123456789012", "01")
+	err3 := gds.RemoveEstimateFromWorkPackage("12345678901234567890123456789012", "01")
 	assert.Errorf(t, err3, "Specified session does not exist")
 }
 
@@ -595,7 +703,7 @@ func TestRemoveEstimateFromWorkPackageErrorWhileTryingToRemoveEstimateFromNonExi
 	assert.NoError(t, err)
 	token, err2 := gds.CreateSession()
 	assert.NoError(t, err2)
-	err3 := gds.RemoveEstimate(token, "01")
+	err3 := gds.RemoveEstimateFromWorkPackage(token, "01")
 	assert.Errorf(t, err3, "Work package with ID: 01 does not exist")
 }
 
@@ -608,13 +716,13 @@ func TestRemoveEstimateFromSessionSuccessWithRealDB(t *testing.T) {
 	assert.NoError(t, err2)
 	err3 := gds.AddWorkPackage(token, "01", "eat honey")
 	assert.NoError(t, err3)
-	err4 := gds.AddEstimate(token, "01", 1.5, 0.2)
+	err4 := gds.AddEstimateToWorkPackage(token, "01", 1.5, 0.2)
 	assert.NoError(t, err4)
 	wps, err5 := gds.GetWorkPackages(token)
 	assert.NoError(t, err5)
 	assert.Equal(t, 1.5, wps[0].Effort)
 	assert.Equal(t, 0.2, wps[0].StandardDeviation)
-	err6 := gds.RemoveEstimate(token, "01")
+	err6 := gds.RemoveEstimateFromWorkPackage(token, "01")
 	assert.NoError(t, err6)
 	wps2, err7 := gds.GetWorkPackages(token)
 	assert.NoError(t, err7)

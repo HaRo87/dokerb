@@ -392,7 +392,7 @@ func addUpdateWorkPackageEstimateOfWorkPackageRoute(api fiber.Router, store data
 			return c.Status(400).JSON(data)
 		}
 
-		if err := store.AddEstimate(c.Params("token"), c.Params("id"), es.Effort, es.StandardDeviation); err != nil {
+		if err := store.AddEstimateToWorkPackage(c.Params("token"), c.Params("id"), es.Effort, es.StandardDeviation); err != nil {
 			data := ErrorResponse{
 				Message: "error",
 				Reason:  err.Error(),
@@ -419,7 +419,7 @@ func addUpdateWorkPackageEstimateOfWorkPackageRoute(api fiber.Router, store data
 // @Router /sessions/{token}/workpackages/{id}/estimate [delete]
 func addResetEstimateOfWorkPackageRoute(api fiber.Router, store datastore.DataStore) {
 	api.Delete("/sessions/:token/workpackages/:id/estimate", func(c *fiber.Ctx) error {
-		if err := store.RemoveEstimate(c.Params("token"), c.Params("id")); err != nil {
+		if err := store.RemoveEstimateFromWorkPackage(c.Params("token"), c.Params("id")); err != nil {
 			data := ErrorResponse{
 				Message: "error",
 				Reason:  err.Error(),
