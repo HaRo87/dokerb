@@ -19,4 +19,4 @@
 .task/
 
 *.db
-docs/*
+# docs/*

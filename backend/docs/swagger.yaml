@@ -1,0 +1,307 @@
+basePath: /api
+definitions:
+  apiserver.DocEntry:
+    properties:
+      name:
+        example: GitHub
+        format: string
+        type: string
+      url:
+        example: https://github.com/HaRo87
+        format: string
+        type: string
+    type: object
+  apiserver.DocResponse:
+    properties:
+      message:
+        example: ok
+        format: string
+        type: string
+      results:
+        items:
+          $ref: '#/definitions/apiserver.DocEntry'
+        type: array
+    type: object
+  apiserver.ErrorResponse:
+    properties:
+      message:
+        example: error
+        format: string
+        type: string
+      reason:
+        example: oops, something went wrong
+        format: string
+        type: string
+    type: object
+  apiserver.GeneralResponse:
+    properties:
+      message:
+        example: ok
+        format: string
+        type: string
+    type: object
+  apiserver.SessionResponse:
+    properties:
+      message:
+        example: ok
+        format: string
+        type: string
+      token:
+        example: "12345678901234567890123456789012"
+        format: string
+        type: string
+    type: object
+  apiserver.UsersResponse:
+    properties:
+      message:
+        example: ok
+        format: string
+        type: string
+      users:
+        example:
+        - Tigger
+        - Rabbit
+        format: '[]string'
+        items:
+          type: string
+        type: array
+    type: object
+  apiserver.WorkPackage:
+    properties:
+      id:
+        example: TEST01
+        format: string
+        type: string
+      summary:
+        example: a sample task
+        format: string
+        type: string
+    type: object
+  apiserver.WorkPackagesResponse:
+    properties:
+      message:
+        example: ok
+        format: string
+        type: string
+      workpackages:
+        format: '[]datastore.WorkPackage'
+        items:
+          $ref: '#/definitions/datastore.WorkPackage'
+        type: array
+    type: object
+  datastore.WorkPackage:
+    properties:
+      effort:
+        type: number
+      id:
+        type: string
+      standardDeviation:
+        type: number
+      summary:
+        type: string
+    type: object
+host: localhost:5000
+info:
+  contact:
+    name: HaRo87
+    url: https://github.com/HaRo87
+  description: A backend for playing Planning Poker with Delphi estimate method.
+  license:
+    name: MIT
+    url: https://github.com/HaRo87/dokerb/blob/main/LICENSE
+  title: Doker Backend API
+  version: 0.1.0
+paths:
+  /docs:
+    get:
+      description: Get a list of helpful documentation resources
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apiserver.DocResponse'
+      summary: Get the documentation info
+      tags:
+      - documentation
+  /sessions:
+    post:
+      description: Creates a new Doker session and responds with the corresponding
+        token
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apiserver.SessionResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiserver.ErrorResponse'
+      summary: Create a new Doker session
+      tags:
+      - session
+  /sessions/{token}:
+    delete:
+      description: Deletes a existing Doker session based on the provided token
+      parameters:
+      - description: Session Token
+        in: path
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apiserver.GeneralResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiserver.ErrorResponse'
+      summary: Delete a existing Doker session
+      tags:
+      - session
+  /sessions/{token}/users:
+    get:
+      description: Gets all users of an existing session
+      parameters:
+      - description: Session Token
+        in: path
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apiserver.UsersResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiserver.ErrorResponse'
+      summary: Get the users of an existing session
+      tags:
+      - session
+      - user
+  /sessions/{token}/users/{name}:
+    delete:
+      description: Removes a existing user from an existing session
+      parameters:
+      - description: Session Token
+        in: path
+        name: token
+        required: true
+        type: string
+      - description: Name of the user
+        in: path
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apiserver.GeneralResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiserver.ErrorResponse'
+      summary: Remove a user from a session
+      tags:
+      - session
+      - user
+    post:
+      description: Adds a new (non-existing) user to an existing session
+      parameters:
+      - description: Session Token
+        in: path
+        name: token
+        required: true
+        type: string
+      - description: Name of the user
+        in: path
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apiserver.GeneralResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiserver.ErrorResponse'
+      summary: Add a new user to a existing session
+      tags:
+      - session
+      - user
+  /sessions/{token}/workpackages:
+    get:
+      description: Gets all work packages of an existing session
+      parameters:
+      - description: Session Token
+        in: path
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apiserver.WorkPackagesResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiserver.ErrorResponse'
+      summary: Get the work packages of a session
+      tags:
+      - session
+      - workpackage
+    post:
+      description: Adds a new (non-existing) work package to an existing session
+      parameters:
+      - description: Session Token
+        in: path
+        name: token
+        required: true
+        type: string
+      - description: New Work Package
+        in: body
+        name: workpackage
+        required: true
+        schema:
+          $ref: '#/definitions/apiserver.WorkPackage'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apiserver.GeneralResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apiserver.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiserver.ErrorResponse'
+      summary: Add a new work package to a existing session
+      tags:
+      - session
+      - workpackage
+swagger: "2.0"
