@@ -112,6 +112,150 @@ var doc = `{
                 }
             }
         },
+        "/sessions/{token}/estimates": {
+            "get": {
+                "description": "Gets all estimates of all existing users of all existing work packages inside a existing session",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "estimate"
+                ],
+                "summary": "Get the estimates of all users for all work packages",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session Token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apiserver.PerUserEstimateResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apiserver.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apiserver.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Adds a estimate of a existing user of a existing work package inside a existing session",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "estimate"
+                ],
+                "summary": "Add the estimate of a user for a work package",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session Token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "New Estimate",
+                        "name": "estimate",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/apiserver.PerUserEstimate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apiserver.GeneralResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apiserver.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apiserver.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{token}/estimates/{user}/{id}": {
+            "delete": {
+                "description": "Removes a estimate of a existing user of a existing work package inside a existing session",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "estimate"
+                ],
+                "summary": "Remove the estimate of a user for a work package",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session Token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "User Name",
+                        "name": "user",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Work Package ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apiserver.GeneralResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apiserver.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apiserver.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/sessions/{token}/users": {
             "get": {
                 "description": "Gets all users of an existing session",
@@ -524,6 +668,53 @@ var doc = `{
                 }
             }
         },
+        "apiserver.PerUserEstimate": {
+            "type": "object",
+            "properties": {
+                "b": {
+                    "type": "number",
+                    "format": "float64",
+                    "example": 1.5
+                },
+                "id": {
+                    "type": "string",
+                    "format": "string",
+                    "example": "TEST01"
+                },
+                "m": {
+                    "type": "number",
+                    "format": "float64",
+                    "example": 2
+                },
+                "user": {
+                    "type": "string",
+                    "format": "string",
+                    "example": "Tigger"
+                },
+                "w": {
+                    "type": "number",
+                    "format": "float64",
+                    "example": 3.6
+                }
+            }
+        },
+        "apiserver.PerUserEstimateResponse": {
+            "type": "object",
+            "properties": {
+                "estimates": {
+                    "type": "array",
+                    "format": "[]datastore.Estimate",
+                    "items": {
+                        "$ref": "#/definitions/datastore.Estimate"
+                    }
+                },
+                "message": {
+                    "type": "string",
+                    "format": "string",
+                    "example": "ok"
+                }
+            }
+        },
         "apiserver.SessionResponse": {
             "type": "object",
             "properties": {
@@ -589,6 +780,26 @@ var doc = `{
                     "items": {
                         "$ref": "#/definitions/datastore.WorkPackage"
                     }
+                }
+            }
+        },
+        "datastore.Estimate": {
+            "type": "object",
+            "properties": {
+                "bestCase": {
+                    "type": "number"
+                },
+                "mostLikelyCase": {
+                    "type": "number"
+                },
+                "userName": {
+                    "type": "string"
+                },
+                "workPackageID": {
+                    "type": "string"
+                },
+                "worstCase": {
+                    "type": "number"
                 }
             }
         },
