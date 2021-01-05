@@ -35,7 +35,7 @@ func setupTestCaseForRealDB(t *testing.T) func(t *testing.T) {
 
 func TestNilDB(t *testing.T) {
 	_, err := NewGenjiDatastore(nil)
-	assert.Errorf(t, err, "Proper DB must be provided and not nil")
+	assert.Equal(t, err.Error(), "Proper DB must be provided and not nil")
 }
 
 func TestErrorOnDBSetupCreateTable(t *testing.T) {
@@ -43,7 +43,7 @@ func TestErrorOnDBSetupCreateTable(t *testing.T) {
 	defer setupAndTearDown(t)
 	m.On("Exec", "CREATE TABLE sessions").Return(fmt.Errorf("Ooops, something went wrong"))
 	_, err := NewGenjiDatastore(m)
-	assert.Errorf(t, err, "Unable to create sessions table")
+	assert.Equal(t, err.Error(), "Unable to create sessions table")
 
 	m.MethodCalled("Exec", "CREATE TABLE sessions")
 }
@@ -62,7 +62,7 @@ func TestSingletonPatternWorks(t *testing.T) {
 
 func TestGenerateTokenWrongLength(t *testing.T) {
 	_, err := generateToken(-20)
-	assert.Errorf(t, err, "Invalid token length provided: -20, should be >= 20")
+	assert.Equal(t, err.Error(), "Invalid token length provided: -20, should be >= 20")
 }
 
 func TestGenerateTokenWithMinimalSuggestedLength(t *testing.T) {
@@ -103,7 +103,7 @@ func TestCreateSessionFailsDueToExecError(t *testing.T) {
 	m.On("Exec", "INSERT INTO sessions VALUES ?").Return(fmt.Errorf("Ooops, something went wrong"))
 	token, err2 := ds.CreateSession()
 	assert.Empty(t, token)
-	assert.Errorf(t, err2, "Unable to store session token")
+	assert.Equal(t, err2.Error(), "Unable to store session token")
 	m.MethodCalled("Exec", "INSERT INTO sessions VALUES ?")
 }
 
@@ -137,7 +137,7 @@ func TestJoinSessionFailsDueToEmptyName(t *testing.T) {
 	gds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
 	err2 := gds.JoinSession("12345678901234567890123456789012", "")
-	assert.Errorf(t, err2, "User name should not be empty")
+	assert.Equal(t, err2.Error(), "User name should not be empty")
 }
 
 func TestJoinSessionFailsDueToWrongTokenLength(t *testing.T) {
@@ -147,7 +147,7 @@ func TestJoinSessionFailsDueToWrongTokenLength(t *testing.T) {
 	gds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
 	err2 := gds.JoinSession("1234567890123456789012345678901212", "")
-	assert.Errorf(t, err2, "Session token does not match desired length")
+	assert.Equal(t, err2.Error(), "Session token does not match desired length")
 }
 
 func TestJoinSessionFailsDueToNonExistingSessionWithRealDB(t *testing.T) {
@@ -158,7 +158,7 @@ func TestJoinSessionFailsDueToNonExistingSessionWithRealDB(t *testing.T) {
 	_, err2 := gds.CreateSession()
 	assert.NoError(t, err2)
 	err3 := gds.JoinSession("12345678901234567890123456789012", "Tigger")
-	assert.Errorf(t, err3, "Specified session does not exist")
+	assert.Equal(t, err3.Error(), "Specified session does not exist")
 }
 
 func TestJoinSessionSuccessWithRealDB(t *testing.T) {
@@ -182,19 +182,19 @@ func TestJoinSessionErrorWhileTryingToAddUserTwiceWithRealDB(t *testing.T) {
 	err3 := gds.JoinSession(token, "Tigger")
 	assert.NoError(t, err3)
 	err4 := gds.JoinSession(token, "Tigger")
-	assert.Errorf(t, err4, "User with name: Tigger already part of session")
+	assert.Equal(t, err4.Error(), "User with name: Tigger already part of session")
 }
 
 func TestRemoveUserFromEmptyList(t *testing.T) {
 	l, err := removeUser([]string{}, "Tigger")
-	assert.Errorf(t, err, "User with name: Tigger is not part of session")
+	assert.Equal(t, err.Error(), "User with name: Tigger is not part of session")
 	assert.Len(t, l, 0)
 }
 
 func TestRemoveUserFromListWithoutThatUserBeingPartOfThatList(t *testing.T) {
 	users := []string{"Tigger", "Rabbit", "Piglet"}
 	l, err := removeUser(users, "Winnie-the-Pooh")
-	assert.Errorf(t, err, "User with name: Winnie-the-Pooh is not part of session")
+	assert.Equal(t, err.Error(), "User with name: Winnie-the-Pooh is not part of session")
 	assert.Len(t, l, 3)
 }
 
@@ -208,7 +208,7 @@ func TestRemoveUserSuccess(t *testing.T) {
 
 func TestRemoveWorkPackageFromEmptyList(t *testing.T) {
 	l, err := removeWorkpackage([]WorkPackage{}, "TEST01")
-	assert.Errorf(t, err, "Workpackage with ID: TEST01 is not part of session")
+	assert.Equal(t, err.Error(), "Workpackage with ID: TEST01 is not part of session")
 	assert.Len(t, l, 0)
 }
 
@@ -225,7 +225,7 @@ func TestRemoveWorkPackageFromListWithoutThatWorkPackageBeingPartOfThatList(t *t
 		},
 	}
 	l, err := removeWorkpackage(wps, "TEST04")
-	assert.Errorf(t, err, "Workpackage with ID: TEST04 is not part of session")
+	assert.Equal(t, err.Error(), "Workpackage with ID: TEST04 is not part of session")
 	assert.Len(t, l, 3)
 }
 
@@ -249,7 +249,7 @@ func TestRemoveWorkPackageSuccess(t *testing.T) {
 
 func TestRemoveEstimateFromEmptyList(t *testing.T) {
 	l, err := removeEstimate([]Estimate{}, Estimate{WorkPackageID: "TEST01", UserName: "Tigger"})
-	assert.Errorf(t, err, "Estimate with ID: TEST01 and user name: Tigger is not part of session")
+	assert.Equal(t, err.Error(), "Estimate with ID: TEST01 and user name: Tigger is not part of session")
 	assert.Len(t, l, 0)
 }
 
@@ -269,7 +269,7 @@ func TestRemoveEstimateFromListWithoutThatEstimateBeingPartOfThatListDueToIDAndU
 		},
 	}
 	l, err := removeEstimate(est, Estimate{WorkPackageID: "TEST04", UserName: "Tigger"})
-	assert.Errorf(t, err, "Estimate with ID: TEST04 and user name: Tigger is not part of session")
+	assert.Equal(t, err.Error(), "Estimate with ID: TEST04 and user name: Tigger is not part of session")
 	assert.Len(t, l, 3)
 }
 
@@ -289,7 +289,7 @@ func TestRemoveEstimateFromListWithoutThatEstimateBeingPartOfThatListDueToUserNa
 		},
 	}
 	l, err := removeEstimate(est, Estimate{WorkPackageID: "TEST01", UserName: "Piglet"})
-	assert.Errorf(t, err, "Estimate with ID: TEST01 and user name: Piglet is not part of session")
+	assert.Equal(t, err.Error(), "Estimate with ID: TEST01 and user name: Piglet is not part of session")
 	assert.Len(t, l, 3)
 }
 
@@ -321,7 +321,7 @@ func TestLeaveSessionFailsDueToEmptyName(t *testing.T) {
 	gds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
 	err2 := gds.LeaveSession("12345678901234567890123456789012", "")
-	assert.Errorf(t, err2, "User name should not be empty")
+	assert.Equal(t, err2.Error(), "User name should not be empty")
 }
 
 func TestLeaveSessionFailsDueToWrongTokenLength(t *testing.T) {
@@ -331,7 +331,7 @@ func TestLeaveSessionFailsDueToWrongTokenLength(t *testing.T) {
 	gds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
 	err2 := gds.LeaveSession("123456789012345678901234567890", "")
-	assert.Errorf(t, err2, "Session token does not match desired length")
+	assert.Equal(t, err2.Error(), "Session token does not match desired length")
 }
 
 func TestLeaveSessionFailsDueToNonExistingSessionWithRealDB(t *testing.T) {
@@ -342,7 +342,7 @@ func TestLeaveSessionFailsDueToNonExistingSessionWithRealDB(t *testing.T) {
 	_, err2 := gds.CreateSession()
 	assert.NoError(t, err2)
 	err3 := gds.LeaveSession("12345678901234567890123456789012", "Tigger")
-	assert.Errorf(t, err3, "Specified session does not exist")
+	assert.Equal(t, err3.Error(), "Specified session does not exist")
 }
 
 func TestLeaveSessionSuccessWithRealDB(t *testing.T) {
@@ -367,7 +367,7 @@ func TestRemoveSessionFailsDueToWrongTokenLength(t *testing.T) {
 	gds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
 	err2 := gds.RemoveSession("123456789012345678901234567890")
-	assert.Errorf(t, err2, "Session token does not match desired length")
+	assert.Equal(t, err2.Error(), "Session token does not match desired length")
 }
 
 func TestRemoveSessionFailsDueToNonExistingSessionWithRealDB(t *testing.T) {
@@ -378,7 +378,7 @@ func TestRemoveSessionFailsDueToNonExistingSessionWithRealDB(t *testing.T) {
 	_, err2 := gds.CreateSession()
 	assert.NoError(t, err2)
 	err3 := gds.RemoveSession("12345678901234567890123456789012")
-	assert.Errorf(t, err3, "Specified session does not exist")
+	assert.Equal(t, err3.Error(), "Specified session does not exist")
 }
 
 func TestRemoveSessionSuccessWithRealDB(t *testing.T) {
@@ -399,7 +399,7 @@ func TestAddWorkPackageToSessionFailsDueToEmptyID(t *testing.T) {
 	gds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
 	err2 := gds.AddWorkPackage("12345678901234567890123456789012", "", "eat honey")
-	assert.Errorf(t, err2, "ID should not be empty")
+	assert.Equal(t, err2.Error(), "ID should not be empty")
 }
 
 func TestAddWorkPackageToSessionFailsDueToWrongTokenLength(t *testing.T) {
@@ -409,7 +409,7 @@ func TestAddWorkPackageToSessionFailsDueToWrongTokenLength(t *testing.T) {
 	gds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
 	err2 := gds.AddWorkPackage("1234567890123456789012345678901212", "01", "eat honey")
-	assert.Errorf(t, err2, "Session token does not match desired length")
+	assert.Equal(t, err2.Error(), "Session token does not match desired length")
 }
 
 func TestAddWorkPackageToSessionFailsDueToNonExistingSessionWithRealDB(t *testing.T) {
@@ -420,7 +420,7 @@ func TestAddWorkPackageToSessionFailsDueToNonExistingSessionWithRealDB(t *testin
 	_, err2 := gds.CreateSession()
 	assert.NoError(t, err2)
 	err3 := gds.AddWorkPackage("12345678901234567890123456789012", "01", "eat honey")
-	assert.Errorf(t, err3, "Specified session does not exist")
+	assert.Equal(t, err3.Error(), "Specified session does not exist")
 }
 
 func TestAddWorkPackageToSessionSuccessWithRealDB(t *testing.T) {
@@ -444,7 +444,7 @@ func TestAddWorkPackageToSessionErrorWhileTryingToAddWorkPackageTwiceWithRealDB(
 	err3 := gds.AddWorkPackage(token, "01", "eat honey")
 	assert.NoError(t, err3)
 	err4 := gds.AddWorkPackage(token, "01", "eat honey")
-	assert.Errorf(t, err4, "Workpackage with ID: 01 already part of session")
+	assert.Equal(t, err4.Error(), "Workpackage with ID: 01 already part of session")
 }
 
 func TestRemoveWorkPackageFromSessionFailsDueToEmptyID(t *testing.T) {
@@ -454,7 +454,7 @@ func TestRemoveWorkPackageFromSessionFailsDueToEmptyID(t *testing.T) {
 	gds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
 	err2 := gds.RemoveWorkPackage("12345678901234567890123456789012", "")
-	assert.Errorf(t, err2, "ID should not be empty")
+	assert.Equal(t, err2.Error(), "ID should not be empty")
 }
 
 func TestRemoveWorkPackageFromSessionFailsDueToWrongTokenLength(t *testing.T) {
@@ -464,7 +464,7 @@ func TestRemoveWorkPackageFromSessionFailsDueToWrongTokenLength(t *testing.T) {
 	gds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
 	err2 := gds.RemoveWorkPackage("1234567890123456789012345678901212", "01")
-	assert.Errorf(t, err2, "Session token does not match desired length")
+	assert.Equal(t, err2.Error(), "Session token does not match desired length")
 }
 
 func TestRemoveWorkPackageFromSessionFailsDueToNonExistingSessionWithRealDB(t *testing.T) {
@@ -475,7 +475,7 @@ func TestRemoveWorkPackageFromSessionFailsDueToNonExistingSessionWithRealDB(t *t
 	_, err2 := gds.CreateSession()
 	assert.NoError(t, err2)
 	err3 := gds.RemoveWorkPackage("12345678901234567890123456789012", "01")
-	assert.Errorf(t, err3, "Specified session does not exist")
+	assert.Equal(t, err3.Error(), "Specified session does not exist")
 }
 
 func TestRemoveWorkPackageFromSessionFailsDueToNonExistingIDWithRealDB(t *testing.T) {
@@ -486,7 +486,7 @@ func TestRemoveWorkPackageFromSessionFailsDueToNonExistingIDWithRealDB(t *testin
 	token, err2 := gds.CreateSession()
 	assert.NoError(t, err2)
 	err3 := gds.RemoveWorkPackage(token, "01")
-	assert.Errorf(t, err3, "Unable to remove workpackage: 01 from session")
+	assert.Equal(t, err3.Error(), "Unable to remove workpackage: 01 from session")
 }
 
 func TestRemoveWorkPackageFromSessionSuccessWithRealDB(t *testing.T) {
@@ -516,7 +516,7 @@ func TestRemoveWorkPackageFromSessionErrorWhileTryingToRemoveWorkPackageTwiceWit
 	err5 := gds.RemoveWorkPackage(token, "01")
 	assert.NoError(t, err5)
 	err6 := gds.RemoveWorkPackage(token, "01")
-	assert.Errorf(t, err6, "Unable to remove workpackage: 01 from session")
+	assert.Equal(t, err6.Error(), "Unable to remove workpackage: 01 from session")
 }
 
 func TestGetUsersFromSessionFailsDueToWrongTokenLength(t *testing.T) {
@@ -526,7 +526,7 @@ func TestGetUsersFromSessionFailsDueToWrongTokenLength(t *testing.T) {
 	gds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
 	_, err2 := gds.GetUsers("1234567890123456789012345678901212")
-	assert.Errorf(t, err2, "Session token does not match desired length")
+	assert.Equal(t, err2.Error(), "Session token does not match desired length")
 }
 
 func TestGetUsersFromSessionFailsDueToNonExistingSessionWithRealDB(t *testing.T) {
@@ -537,7 +537,7 @@ func TestGetUsersFromSessionFailsDueToNonExistingSessionWithRealDB(t *testing.T)
 	_, err2 := gds.CreateSession()
 	assert.NoError(t, err2)
 	_, err3 := gds.GetUsers("12345678901234567890123456789012")
-	assert.Errorf(t, err3, "Specified session does not exist")
+	assert.Equal(t, err3.Error(), "Specified session does not exist")
 }
 
 func TestGetUsersFromSessionSuccessWithRealDB(t *testing.T) {
@@ -561,7 +561,7 @@ func TestGetWorkPackagesFromSessionFailsDueToWrongTokenLength(t *testing.T) {
 	gds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
 	_, err2 := gds.GetWorkPackages("1234567890123456789012345678901212")
-	assert.Errorf(t, err2, "Session token does not match desired length")
+	assert.Equal(t, err2.Error(), "Session token does not match desired length")
 }
 
 func TestGetWorkPackagesFromSessionFailsDueToNonExistingSessionWithRealDB(t *testing.T) {
@@ -572,7 +572,7 @@ func TestGetWorkPackagesFromSessionFailsDueToNonExistingSessionWithRealDB(t *tes
 	_, err2 := gds.CreateSession()
 	assert.NoError(t, err2)
 	_, err3 := gds.GetWorkPackages("12345678901234567890123456789012")
-	assert.Errorf(t, err3, "Specified session does not exist")
+	assert.Equal(t, err3.Error(), "Specified session does not exist")
 }
 
 func TestGetWorkPackagesFromSessionSuccessWithRealDB(t *testing.T) {
@@ -597,7 +597,7 @@ func TestAddEstimateToWorkPackageFailsDueToEmptyID(t *testing.T) {
 	gds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
 	err2 := gds.AddEstimateToWorkPackage("12345678901234567890123456789012", "", 0.0, 0.0)
-	assert.Errorf(t, err2, "ID should not be empty")
+	assert.Equal(t, err2.Error(), "ID should not be empty")
 }
 
 func TestAddEstimateToWorkPackageFailsDueToWrongTokenLength(t *testing.T) {
@@ -607,7 +607,7 @@ func TestAddEstimateToWorkPackageFailsDueToWrongTokenLength(t *testing.T) {
 	gds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
 	err2 := gds.AddEstimateToWorkPackage("1234567890123456789012345678901212", "01", 0.0, 0.0)
-	assert.Errorf(t, err2, "Session token does not match desired length")
+	assert.Equal(t, err2.Error(), "Session token does not match desired length")
 }
 
 func TestAddEstimateToWorkPackageFailsDueToIncorrectEffort(t *testing.T) {
@@ -617,7 +617,7 @@ func TestAddEstimateToWorkPackageFailsDueToIncorrectEffort(t *testing.T) {
 	gds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
 	err2 := gds.AddEstimateToWorkPackage("12345678901234567890123456789012", "01", -0.1, 0.0)
-	assert.Errorf(t, err2, "Effort < 0 not allowed")
+	assert.Equal(t, err2.Error(), "Effort < 0 not allowed")
 }
 
 func TestAddEstimateToWorkPackageFailsDueToIncorrectStandardDeviation(t *testing.T) {
@@ -627,7 +627,7 @@ func TestAddEstimateToWorkPackageFailsDueToIncorrectStandardDeviation(t *testing
 	gds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
 	err2 := gds.AddEstimateToWorkPackage("12345678901234567890123456789012", "01", 0.1, -0.1)
-	assert.Errorf(t, err2, "Standard deviation < 0 not allowed")
+	assert.Equal(t, err2.Error(), "Standard deviation < 0 not allowed")
 }
 
 func TestAddEstimateToWorkPackageFailsDueToNonExistingSessionWithRealDB(t *testing.T) {
@@ -638,7 +638,7 @@ func TestAddEstimateToWorkPackageFailsDueToNonExistingSessionWithRealDB(t *testi
 	_, err2 := gds.CreateSession()
 	assert.NoError(t, err2)
 	err3 := gds.AddEstimateToWorkPackage("12345678901234567890123456789012", "01", 0.0, 0.0)
-	assert.Errorf(t, err3, "Specified session does not exist")
+	assert.Equal(t, err3.Error(), "Specified session does not exist")
 }
 
 func TestAddEstimateToWorkPackageErrorWhileTryingToAddEstimateToNonExistingWorkPackageWithRealDB(t *testing.T) {
@@ -649,10 +649,10 @@ func TestAddEstimateToWorkPackageErrorWhileTryingToAddEstimateToNonExistingWorkP
 	token, err2 := gds.CreateSession()
 	assert.NoError(t, err2)
 	err3 := gds.AddEstimateToWorkPackage(token, "01", 1.5, 0.2)
-	assert.Errorf(t, err3, "Work package with ID: 01 does not exist")
+	assert.Equal(t, err3.Error(), "Work package with ID: 01 does not exist")
 }
 
-func TestAddEstimateToSessionSuccessWithRealDB(t *testing.T) {
+func TestAddEstimateToWorkPackageSuccessWithRealDB(t *testing.T) {
 	setupAndTearDown := setupTestCaseForRealDB(t)
 	defer setupAndTearDown(t)
 	gds, err := NewGenjiDatastore(db)
@@ -672,7 +672,7 @@ func TestRemoveEstimateFromWorkPackageFailsDueToEmptyID(t *testing.T) {
 	gds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
 	err2 := gds.RemoveEstimateFromWorkPackage("12345678901234567890123456789012", "")
-	assert.Errorf(t, err2, "ID should not be empty")
+	assert.Equal(t, err2.Error(), "ID should not be empty")
 }
 
 func TestRemoveEstimateFromWorkPackageFailsDueToWrongTokenLength(t *testing.T) {
@@ -682,7 +682,7 @@ func TestRemoveEstimateFromWorkPackageFailsDueToWrongTokenLength(t *testing.T) {
 	gds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
 	err2 := gds.RemoveEstimateFromWorkPackage("1234567890123456789012345678901212", "01")
-	assert.Errorf(t, err2, "Session token does not match desired length")
+	assert.Equal(t, err2.Error(), "Session token does not match desired length")
 }
 
 func TestRemoveEstimateFromWorkPackageFailsDueToNonExistingSessionWithRealDB(t *testing.T) {
@@ -693,7 +693,7 @@ func TestRemoveEstimateFromWorkPackageFailsDueToNonExistingSessionWithRealDB(t *
 	_, err2 := gds.CreateSession()
 	assert.NoError(t, err2)
 	err3 := gds.RemoveEstimateFromWorkPackage("12345678901234567890123456789012", "01")
-	assert.Errorf(t, err3, "Specified session does not exist")
+	assert.Equal(t, err3.Error(), "Specified session does not exist")
 }
 
 func TestRemoveEstimateFromWorkPackageErrorWhileTryingToRemoveEstimateFromNonExistingWorkPackageWithRealDB(t *testing.T) {
@@ -704,10 +704,10 @@ func TestRemoveEstimateFromWorkPackageErrorWhileTryingToRemoveEstimateFromNonExi
 	token, err2 := gds.CreateSession()
 	assert.NoError(t, err2)
 	err3 := gds.RemoveEstimateFromWorkPackage(token, "01")
-	assert.Errorf(t, err3, "Work package with ID: 01 does not exist")
+	assert.Equal(t, err3.Error(), "Work package with ID: 01 does not exist")
 }
 
-func TestRemoveEstimateFromSessionSuccessWithRealDB(t *testing.T) {
+func TestRemoveEstimateFromWorkPackageSuccessWithRealDB(t *testing.T) {
 	setupAndTearDown := setupTestCaseForRealDB(t)
 	defer setupAndTearDown(t)
 	gds, err := NewGenjiDatastore(db)
@@ -728,4 +728,55 @@ func TestRemoveEstimateFromSessionSuccessWithRealDB(t *testing.T) {
 	assert.NoError(t, err7)
 	assert.Equal(t, 0.0, wps2[0].Effort)
 	assert.Equal(t, 0.0, wps2[0].StandardDeviation)
+}
+
+func TestAddEstimateToSessionFailsDueToEmptyWorkPackageID(t *testing.T) {
+	setupAndTearDown := setupTestCaseForMock(t)
+	defer setupAndTearDown(t)
+	m.On("Exec", "CREATE TABLE sessions").Return(nil)
+	gds, err := NewGenjiDatastore(m)
+	assert.NoError(t, err)
+	err2 := gds.AddEstimate("12345678901234567890123456789012", Estimate{WorkPackageID: "", UserName: "Tigger"})
+	assert.Equal(t, err2.Error(), "Work Package ID should not be empty")
+}
+
+func TestAddEstimateToSessionFailsDueToEmptyUserName(t *testing.T) {
+	setupAndTearDown := setupTestCaseForMock(t)
+	defer setupAndTearDown(t)
+	m.On("Exec", "CREATE TABLE sessions").Return(nil)
+	gds, err := NewGenjiDatastore(m)
+	assert.NoError(t, err)
+	err2 := gds.AddEstimate("12345678901234567890123456789012", Estimate{WorkPackageID: "TEST01", UserName: ""})
+	assert.Equal(t, err2.Error(), "User name should not be empty")
+}
+
+func TestAddEstimateToSessionFailsDueToWrongTokenLength(t *testing.T) {
+	setupAndTearDown := setupTestCaseForMock(t)
+	defer setupAndTearDown(t)
+	m.On("Exec", "CREATE TABLE sessions").Return(nil)
+	gds, err := NewGenjiDatastore(m)
+	assert.NoError(t, err)
+	err2 := gds.AddEstimate("1234567890123456789012345678901212", Estimate{WorkPackageID: "TEST01", UserName: "Tigger"})
+	assert.Equal(t, err2.Error(), "Session token does not match desired length")
+}
+
+func TestAddEstimateToSessionFailsDueToWrongValueForBestCase(t *testing.T) {
+	setupAndTearDown := setupTestCaseForMock(t)
+	defer setupAndTearDown(t)
+	m.On("Exec", "CREATE TABLE sessions").Return(nil)
+	gds, err := NewGenjiDatastore(m)
+	assert.NoError(t, err)
+	err2 := gds.AddEstimate("12345678901234567890123456789012", Estimate{WorkPackageID: "TEST01", UserName: "Tigger", BestCase: -0.1})
+	assert.Equal(t, err2.Error(), "Best case must be >= 0, provided: -0.1")
+}
+
+func TestAddEstimateToSessionFailsDueToNonExistingSessionWithRealDB(t *testing.T) {
+	setupAndTearDown := setupTestCaseForRealDB(t)
+	defer setupAndTearDown(t)
+	gds, err := NewGenjiDatastore(db)
+	assert.NoError(t, err)
+	_, err2 := gds.CreateSession()
+	assert.NoError(t, err2)
+	err3 := gds.AddEstimate("12345678901234567890123456789012", Estimate{WorkPackageID: "TEST01", UserName: "Tigger", BestCase: 0.1, MostLikelyCase: 0.5, WorstCase: 1.0})
+	assert.Equal(t, err3.Error(), "Specified session does not exist")
 }

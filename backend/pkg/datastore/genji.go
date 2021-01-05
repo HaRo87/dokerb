@@ -7,6 +7,7 @@ import (
 	"github.com/genjidb/genji"
 	"github.com/genjidb/genji/document"
 	"github.com/genjidb/genji/sql/query"
+	dbestimate "github.com/haro87/dokerb/pkg/estimate"
 	"sync"
 )
 
@@ -346,6 +347,18 @@ func (g GenjiDatastore) GetWorkPackages(token string) ([]WorkPackage, error) {
 func (g GenjiDatastore) AddEstimate(token string, estimate Estimate) error {
 	if len(token) != defaultTokenLength {
 		return fmt.Errorf("Session token does not match desired length")
+	}
+
+	if estimate.WorkPackageID == "" {
+		return fmt.Errorf("Work Package ID should not be empty")
+	}
+
+	if estimate.UserName == "" {
+		return fmt.Errorf("User name should not be empty")
+	}
+
+	if _, e := dbestimate.NewDelphiEstimate(estimate.BestCase, estimate.MostLikelyCase, estimate.WorstCase); e != nil {
+		return e
 	}
 
 	se, err := sessionExists(token)
