@@ -1,8 +1,5 @@
 # Delphi Planning Poker (Doker) Backend
 
-Just looking for a pet project which can be used by me to learn something about
-[Fiber](https://gofiber.io/).
-
 ![Testing Go Code](https://github.com/HaRo87/dokerb/workflows/Testing%20Go%20Code/badge.svg?branch=main&event=push)
 [![codecov](https://codecov.io/gh/HaRo87/dokerb/branch/main/graph/badge.svg?token=YNELZZ65S1)](https://codecov.io/gh/HaRo87/dokerb)
 
@@ -39,8 +36,40 @@ task -s
 Then you should be able to navigate to `http://127.0.0.1:<port>` where `port` is defined by your config
 file -> default is `5000`.
 
-This should display the general info page which also provides links to further documentation and the 
-Swagger documentation.
+This should display the general info page which also provides links to 
+further documentation and the Swagger documentation. You can then use
+either the interactive Swagger documentation or a tool like 
+[HTTPie](https://httpie.io) for trying out the API.
+
+Creating a new session should be as simple as running:
+
+```bash
+http POST http://127.0.0.1:5000/api/sessions
+```
+
+to create a new session where the response should look something like:
+
+```json
+{
+    "message": "ok",
+    "route": "/sessions/eaf27c59ecdf0db4e165c4f940e176ec"
+}
+```
+
+Then you can also do things like adding a user:
+
+```bash
+http POST http://127.0.0.1:5000/api/sessions/eaf27c59ecdf0db4e165c4f940e176ec/users name="Tigger"
+```
+
+which should produce an output like:
+
+```json
+{
+    "message": "ok",
+    "route": "/sessions/eaf27c59ecdf0db4e165c4f940e176ec/users/Tigger"
+}
+```
 
 ## ⚙️ Configuration
 
