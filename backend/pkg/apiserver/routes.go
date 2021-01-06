@@ -4,6 +4,7 @@ import (
 	"github.com/arsmn/fiber-swagger/v2"
 	"github.com/gofiber/fiber/v2"
 	_ "github.com/haro87/dokerb/docs"
+	"github.com/haro87/dokerb/pkg/compute"
 	"github.com/haro87/dokerb/pkg/datastore"
 )
 
@@ -53,6 +54,14 @@ type WorkPackage struct {
 type Estimate struct {
 	Effort            float64 `json:"effort" example:"1.5" format:"float64"`
 	StandardDeviation float64 `json:"standarddeviation" example:"0.2" format:"float64"`
+}
+
+// CalcEstimate represents the response for calculated average estimate
+type CalcEstimate struct {
+	Message  string   `json:"message" example:"warning" format:"string"`
+	Hint     string   `json:"hint" example:"not all users provided estimates" format:"string"`
+	Users    []string `json:"users" example:"Tigger" format:"[]string"`
+	Estimate Estimate `json:"estimate" format:"Estimate"`
 }
 
 // PerUserEstimate represents a user and work package individual estimate
@@ -121,6 +130,8 @@ func Routes(app *fiber.App, store datastore.DataStore) {
 	addRemoveUserEstimateFromSessionRoute(APIGroup, store)
 
 	addGetUserEstimatesFromSessionRoute(APIGroup, store)
+
+	addGetAverageEstimateForWorkPackageFromSessionRoute(APIGroup, store)
 }
 
 // Adding the documentation route
@@ -577,4 +588,93 @@ func addGetUserEstimatesFromSessionRoute(api fiber.Router, store datastore.DataS
 		}
 		return c.Status(200).JSON(data)
 	})
+}
+
+// Adding the Get average user estimate from session route
+// @Summary Get the average estimate of all users for a specific work package
+// @Description Gets the average estimate of all existing users of a existing work package inside a existing session
+// @Tags estimate
+// @Produce  json
+// @Param token path string true "Session Token"
+// @Param id path string true "Work Package ID"
+// @Success 200 {object} CalcEstimate
+// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /sessions/{token}/estimates/{id} [get]
+func addGetAverageEstimateForWorkPackageFromSessionRoute(api fiber.Router, store datastore.DataStore) {
+	api.Get("/sessions/:token/estimates/:id", func(c *fiber.Ctx) error {
+
+		ests, e := store.GetEstimates(c.Params("token"))
+
+		if e != nil {
+			data := ErrorResponse{
+				Message: "error",
+				Reason:  e.Error(),
+			}
+			return c.Status(500).JSON(data)
+		}
+
+		ests, e = compute.ExtractEstimatesForWorkPackage(ests, c.Params("id"))
+
+		if e != nil {
+			data := ErrorResponse{
+				Message: "error",
+				Reason:  e.Error(),
+			}
+			return c.Status(500).JSON(data)
+		}
+
+		users, ue := store.GetUsers(c.Params("token"))
+
+		if ue != nil {
+			data := ErrorResponse{
+				Message: "error",
+				Reason:  ue.Error(),
+			}
+			return c.Status(500).JSON(data)
+		}
+
+		avge, ae := compute.CalculateAverageEstimate(ests, c.Params("id"))
+
+		if ae != nil {
+			data := ErrorResponse{
+				Message: "error",
+				Reason:  ae.Error(),
+			}
+			return c.Status(500).JSON(data)
+		}
+
+		message := "ok"
+		hint := ""
+
+		for _, es := range ests {
+			users = checkForAllUsers(users, es.UserName)
+		}
+
+		if len(users) > 0 {
+			message = "warning"
+			hint = "not all users did provide estimates"
+		}
+
+		data := CalcEstimate{
+			Message: message,
+			Hint:    hint,
+			Users:   users,
+			Estimate: Estimate{
+				Effort:            avge.GetEffort(),
+				StandardDeviation: avge.GetStandardDeviation(),
+			},
+		}
+		return c.Status(200).JSON(data)
+	})
+}
+
+func checkForAllUsers(users []string, user string) []string {
+	for i, u := range users {
+		if u == user {
+			users = append(users[:i], users[i+1:]...)
+			break
+		}
+	}
+	return users
 }

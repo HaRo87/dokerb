@@ -1,5 +1,26 @@
 basePath: /api
 definitions:
+  apiserver.CalcEstimate:
+    properties:
+      estimate:
+        $ref: '#/definitions/apiserver.Estimate'
+        format: Estimate
+      hint:
+        example: not all users provided estimates
+        format: string
+        type: string
+      message:
+        example: warning
+        format: string
+        type: string
+      users:
+        example:
+        - Tigger
+        format: '[]string'
+        items:
+          type: string
+        type: array
+    type: object
   apiserver.DocEntry:
     properties:
       name:
@@ -284,6 +305,39 @@ paths:
           schema:
             $ref: '#/definitions/apiserver.ErrorResponse'
       summary: Add the estimate of a user for a work package
+      tags:
+      - estimate
+  /sessions/{token}/estimates/{id}:
+    get:
+      description: Gets the average estimate of all existing users of a existing work
+        package inside a existing session
+      parameters:
+      - description: Session Token
+        in: path
+        name: token
+        required: true
+        type: string
+      - description: Work Package ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apiserver.CalcEstimate'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apiserver.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiserver.ErrorResponse'
+      summary: Get the average estimate of all users for a specific work package
       tags:
       - estimate
   /sessions/{token}/estimates/{user}/{id}:

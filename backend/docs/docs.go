@@ -201,6 +201,54 @@ var doc = `{
                 }
             }
         },
+        "/sessions/{token}/estimates/{id}": {
+            "get": {
+                "description": "Gets the average estimate of all existing users of a existing work package inside a existing session",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "estimate"
+                ],
+                "summary": "Get the average estimate of all users for a specific work package",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session Token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Work Package ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apiserver.CalcEstimate"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apiserver.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apiserver.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/sessions/{token}/estimates/{user}/{id}": {
             "delete": {
                 "description": "Removes a estimate of a existing user of a existing work package inside a existing session",
@@ -599,6 +647,35 @@ var doc = `{
         }
     },
     "definitions": {
+        "apiserver.CalcEstimate": {
+            "type": "object",
+            "properties": {
+                "estimate": {
+                    "format": "Estimate",
+                    "$ref": "#/definitions/apiserver.Estimate"
+                },
+                "hint": {
+                    "type": "string",
+                    "format": "string",
+                    "example": "not all users provided estimates"
+                },
+                "message": {
+                    "type": "string",
+                    "format": "string",
+                    "example": "warning"
+                },
+                "users": {
+                    "type": "array",
+                    "format": "[]string",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "Tigger"
+                    ]
+                }
+            }
+        },
         "apiserver.DocEntry": {
             "type": "object",
             "properties": {

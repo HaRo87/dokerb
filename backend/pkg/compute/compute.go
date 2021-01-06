@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"github.com/haro87/dokerb/pkg/datastore"
 	"github.com/haro87/dokerb/pkg/estimate"
+	"sort"
 )
 
 // CalculateAverageEstimate calculates the average estimate of all provided
 // estimates matching a given work package ID
 func CalculateAverageEstimate(estimates []datastore.Estimate, id string) (estimate.Estimator, error) {
-	ests, err := extractEstimatesForWorkPackage(estimates, id)
+	ests, err := ExtractEstimatesForWorkPackage(estimates, id)
 
 	if err != nil {
 		return nil, err
@@ -37,7 +38,39 @@ func CalculateAverageEstimate(estimates []datastore.Estimate, id string) (estima
 
 }
 
-func extractEstimatesForWorkPackage(estimates []datastore.Estimate, id string) ([]datastore.Estimate, error) {
+// GetUsersWithMaxDistanceBetweenEffort returns the two users, if they
+// exist, who have the max distance between their effort estimates
+func GetUsersWithMaxDistanceBetweenEffort(estimates []datastore.Estimate, id string) ([]string, error) {
+	ests, err := ExtractEstimatesForWorkPackage(estimates, id)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var list []estimate.UserEstimate
+
+	for _, est := range ests {
+		es, e := estimate.NewDelphiEstimate(est.BestCase, est.MostLikelyCase, est.WorstCase)
+		if e != nil {
+			return []string{}, e
+		}
+		list = append(list, estimate.UserEstimate{Name: est.UserName, Estimate: es})
+	}
+
+	l, le := estimate.NewEstimateList(list)
+
+	if le != nil {
+		return []string{}, le
+	}
+
+	sort.Sort(l)
+
+	return []string{l.GetFirstUser(), l.GetLastUser()}, nil
+}
+
+// ExtractEstimatesForWorkPackage extracts all estimates for a specified
+// work package ID
+func ExtractEstimatesForWorkPackage(estimates []datastore.Estimate, id string) ([]datastore.Estimate, error) {
 	if id == "" {
 		return []datastore.Estimate{}, fmt.Errorf("Work Package ID cannot be empty")
 	}
