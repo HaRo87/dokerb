@@ -21,12 +21,21 @@ type workPackage struct {
 	StandardDeviation float64 `json:"standarddeviation"`
 }
 
+type estimate struct {
+	WorkPackageID  string  `json:"workpackageid"`
+	UserName       string  `json:"username"`
+	BestCase       float64 `json:"bestcase"`
+	MostLikelyCase float64 `json:"mostlikelycase"`
+	WorstCase      float64 `json:"worstcase"`
+}
+
 type apiResponse struct {
 	Message      string        `json:"message"`
 	Reason       string        `json:"reason"`
 	Token        string        `json:"token"`
 	Users        []string      `json:"users"`
 	Workpackages []workPackage `json:"workpackages"`
+	Estimates    []estimate    `json:"estimates"`
 }
 
 type mock struct {
@@ -162,6 +171,37 @@ func TestAPIRoutesForErrors(t *testing.T) {
 		{
 			Description:          "Deleting a work package estimate fails due to wrong token length",
 			Route:                "/api/sessions/12345/workpackages/TEST01/estimate",
+			Method:               "DELETE",
+			ExpectedError:        false,
+			ExpectedErrorMessage: "Session token does not match desired length",
+			ExpectedCode:         500,
+		},
+		{
+			Description: "Adding a estimates to a session fails due to wrong token length",
+			Route:       "/api/sessions/12345/estimates",
+			Method:      "POST",
+			Body: map[string]interface{}{
+				"id":   "TEST01",
+				"user": "Tigger",
+				"b":    0.5,
+				"m":    1.0,
+				"w":    2.0,
+			},
+			ExpectedError:        false,
+			ExpectedErrorMessage: "Session token does not match desired length",
+			ExpectedCode:         500,
+		},
+		{
+			Description:          "Deleting a estimate fails due to wrong token length",
+			Route:                "/api/sessions/12345/estimates",
+			Method:               "GET",
+			ExpectedError:        false,
+			ExpectedErrorMessage: "Session token does not match desired length",
+			ExpectedCode:         500,
+		},
+		{
+			Description:          "Getting estimates fails due to wrong token length",
+			Route:                "/api/sessions/12345/estimates/Tigger/TEST01",
 			Method:               "DELETE",
 			ExpectedError:        false,
 			ExpectedErrorMessage: "Session token does not match desired length",
@@ -1131,4 +1171,305 @@ func TestAddEstimateToWorkPackageFailsDueToMissingHeader(t *testing.T) {
 	assert.Equal(t, "error", ar.Message)
 	assert.Equal(t, "Unprocessable Entity", ar.Reason)
 	assert.Equal(t, 400, res.StatusCode)
+}
+
+func TestAddEstimateToSessionFailsDueToMissingHeader(t *testing.T) {
+	setupAndTearDown := setupTestCaseForRealDB(t)
+	defer setupAndTearDown(t)
+
+	app := NewServer(&Config{
+		Static: static{Prefix: "/public", Path: "../../static"},
+	}, db).Start()
+
+	req, _ := http.NewRequest(
+		"POST",
+		"/api/sessions",
+		nil,
+	)
+
+	res, err := app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	var ar apiResponse
+	decoder := json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+	token := ar.Token
+
+	payloadf := map[string]interface{}{
+		"id":   "TEST01",
+		"user": "Tigger",
+		"b":    0.5,
+		"m":    1.0,
+		"w":    2.0,
+	}
+	body, me := json.Marshal(payloadf)
+
+	assert.NoError(t, me)
+
+	req, _ = http.NewRequest(
+		"POST",
+		"/api/sessions/"+token+"/estimates",
+		bytes.NewBuffer(body),
+	)
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "error", ar.Message)
+	assert.Equal(t, "Unprocessable Entity", ar.Reason)
+	assert.Equal(t, 400, res.StatusCode)
+}
+
+func TestAddAndRemoveEstimateToFromSessionSuccess(t *testing.T) {
+	setupAndTearDown := setupTestCaseForRealDB(t)
+	defer setupAndTearDown(t)
+
+	app := NewServer(&Config{
+		Static: static{Prefix: "/public", Path: "../../static"},
+	}, db).Start()
+
+	req, _ := http.NewRequest(
+		"POST",
+		"/api/sessions",
+		nil,
+	)
+
+	res, err := app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	var ar apiResponse
+	decoder := json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+	token := ar.Token
+
+	payload := map[string]string{
+		"id": "TEST01",
+	}
+	body, me := json.Marshal(payload)
+
+	assert.NoError(t, me)
+
+	req, _ = http.NewRequest(
+		"POST",
+		"/api/sessions/"+token+"/workpackages",
+		bytes.NewBuffer(body),
+	)
+	req.Header.Set("Content-Type", "application/json")
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+
+	payload = map[string]string{
+		"id":      "TEST02",
+		"summary": "some test",
+	}
+	body, me = json.Marshal(payload)
+
+	assert.NoError(t, me)
+
+	req, _ = http.NewRequest(
+		"POST",
+		"/api/sessions/"+token+"/workpackages",
+		bytes.NewBuffer(body),
+	)
+	req.Header.Set("Content-Type", "application/json")
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+
+	req, _ = http.NewRequest(
+		"POST",
+		"/api/sessions/"+token+"/users/Tigger",
+		nil,
+	)
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+
+	req, _ = http.NewRequest(
+		"POST",
+		"/api/sessions/"+token+"/users/Rabbit",
+		nil,
+	)
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+
+	payloadf := map[string]interface{}{
+		"id":   "TEST01",
+		"user": "Tigger",
+		"b":    0.5,
+		"m":    1.0,
+		"w":    2.0,
+	}
+	body, me = json.Marshal(payloadf)
+
+	assert.NoError(t, me)
+
+	req, _ = http.NewRequest(
+		"POST",
+		"/api/sessions/"+token+"/estimates",
+		bytes.NewBuffer(body),
+	)
+	req.Header.Set("Content-Type", "application/json")
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+
+	payloadf = map[string]interface{}{
+		"id":   "TEST02",
+		"user": "Tigger",
+		"b":    0.2,
+		"m":    1.2,
+		"w":    1.5,
+	}
+	body, me = json.Marshal(payloadf)
+
+	assert.NoError(t, me)
+
+	req, _ = http.NewRequest(
+		"POST",
+		"/api/sessions/"+token+"/estimates",
+		bytes.NewBuffer(body),
+	)
+	req.Header.Set("Content-Type", "application/json")
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+
+	payloadf = map[string]interface{}{
+		"id":   "TEST01",
+		"user": "Rabbit",
+		"b":    1.0,
+		"m":    1.2,
+		"w":    2.0,
+	}
+	body, me = json.Marshal(payloadf)
+
+	assert.NoError(t, me)
+
+	req, _ = http.NewRequest(
+		"POST",
+		"/api/sessions/"+token+"/estimates",
+		bytes.NewBuffer(body),
+	)
+	req.Header.Set("Content-Type", "application/json")
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+
+	req, _ = http.NewRequest(
+		"GET",
+		"/api/sessions/"+token+"/estimates",
+		nil,
+	)
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+	assert.Equal(t, "TEST01", ar.Estimates[0].WorkPackageID)
+	assert.Equal(t, "Tigger", ar.Estimates[0].UserName)
+	assert.Equal(t, 0.5, ar.Estimates[0].BestCase)
+	assert.Equal(t, 1.0, ar.Estimates[0].MostLikelyCase)
+	assert.Equal(t, 2.0, ar.Estimates[0].WorstCase)
+	assert.Equal(t, "TEST02", ar.Estimates[1].WorkPackageID)
+	assert.Equal(t, "Tigger", ar.Estimates[1].UserName)
+	assert.Equal(t, "TEST01", ar.Estimates[2].WorkPackageID)
+	assert.Equal(t, "Rabbit", ar.Estimates[2].UserName)
+	assert.Len(t, ar.Estimates, 3)
+
+	req, _ = http.NewRequest(
+		"DELETE",
+		"/api/sessions/"+token+"/estimates/Rabbit/TEST01",
+		nil,
+	)
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+
+	req, _ = http.NewRequest(
+		"GET",
+		"/api/sessions/"+token+"/estimates",
+		nil,
+	)
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+	assert.Equal(t, "TEST01", ar.Estimates[0].WorkPackageID)
+	assert.Equal(t, "Tigger", ar.Estimates[0].UserName)
+	assert.Equal(t, 0.5, ar.Estimates[0].BestCase)
+	assert.Equal(t, 1.0, ar.Estimates[0].MostLikelyCase)
+	assert.Equal(t, 2.0, ar.Estimates[0].WorstCase)
+	assert.Equal(t, "TEST02", ar.Estimates[1].WorkPackageID)
+	assert.Equal(t, "Tigger", ar.Estimates[1].UserName)
+	assert.Len(t, ar.Estimates, 2)
 }
