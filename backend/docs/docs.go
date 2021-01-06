@@ -65,7 +65,7 @@ var doc = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/apiserver.SessionResponse"
+                            "$ref": "#/definitions/apiserver.GeneralResponse"
                         }
                     },
                     "500": {
@@ -289,9 +289,7 @@ var doc = `{
                         }
                     }
                 }
-            }
-        },
-        "/sessions/{token}/users/{name}": {
+            },
             "post": {
                 "description": "Adds a new (non-existing) user to an existing session",
                 "produces": [
@@ -310,11 +308,13 @@ var doc = `{
                         "required": true
                     },
                     {
-                        "type": "string",
-                        "description": "Name of the user",
-                        "name": "name",
-                        "in": "path",
-                        "required": true
+                        "description": "New User",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/apiserver.User"
+                        }
                     }
                 ],
                 "responses": {
@@ -331,7 +331,9 @@ var doc = `{
                         }
                     }
                 }
-            },
+            }
+        },
+        "/sessions/{token}/users/{name}": {
             "delete": {
                 "description": "Removes a existing user from an existing session",
                 "produces": [
@@ -665,6 +667,11 @@ var doc = `{
                     "type": "string",
                     "format": "string",
                     "example": "ok"
+                },
+                "route": {
+                    "type": "string",
+                    "format": "string",
+                    "example": "/sessions/token"
                 }
             }
         },
@@ -715,18 +722,13 @@ var doc = `{
                 }
             }
         },
-        "apiserver.SessionResponse": {
+        "apiserver.User": {
             "type": "object",
             "properties": {
-                "message": {
+                "name": {
                     "type": "string",
                     "format": "string",
-                    "example": "ok"
-                },
-                "token": {
-                    "type": "string",
-                    "format": "string",
-                    "example": "12345678901234567890123456789012"
+                    "example": "Tigger"
                 }
             }
         },

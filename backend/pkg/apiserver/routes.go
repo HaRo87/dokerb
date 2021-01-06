@@ -25,15 +25,10 @@ type ErrorResponse struct {
 	Reason  string `json:"reason" example:"oops, something went wrong" format:"string"`
 }
 
-// SessionResponse represents the response of the create session call
-type SessionResponse struct {
-	Message string `json:"message" example:"ok" format:"string"`
-	Token   string `json:"token" example:"12345678901234567890123456789012" format:"string"`
-}
-
 // GeneralResponse represents a general API response
 type GeneralResponse struct {
 	Message string `json:"message" example:"ok" format:"string"`
+	Route   string `json:"route" example:"/sessions/token" format:"string"`
 }
 
 // UsersResponse represents the get users response
@@ -73,6 +68,11 @@ type PerUserEstimate struct {
 type PerUserEstimateResponse struct {
 	Message   string               `json:"message" example:"ok" format:"string"`
 	Estimates []datastore.Estimate `json:"estimates" format:"[]datastore.Estimate"`
+}
+
+// User represents a user
+type User struct {
+	Name string `json:"name" example:"Tigger" format:"string"`
 }
 
 // Routes list of the available routes for project
@@ -162,7 +162,7 @@ func addDocRoute(api fiber.Router) {
 // @Description Creates a new Doker session and responds with the corresponding token
 // @Tags session
 // @Produce  json
-// @Success 200 {object} SessionResponse
+// @Success 200 {object} GeneralResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /sessions [post]
 func addCreateSessionRoute(api fiber.Router, store datastore.DataStore) {
@@ -177,9 +177,9 @@ func addCreateSessionRoute(api fiber.Router, store datastore.DataStore) {
 			return c.Status(500).JSON(data)
 		}
 
-		data := SessionResponse{
+		data := GeneralResponse{
 			Message: "ok",
-			Token:   t,
+			Route:   "/sessions/" + t,
 		}
 		return c.Status(200).JSON(data)
 	})
@@ -217,13 +217,23 @@ func addRemoveSessionRoute(api fiber.Router, store datastore.DataStore) {
 // @Tags user
 // @Produce  json
 // @Param token path string true "Session Token"
-// @Param name path string true "Name of the user"
+// @Param  user body User true "New User"
 // @Success 200 {object} GeneralResponse
 // @Failure 500 {object} ErrorResponse
-// @Router /sessions/{token}/users/{name} [post]
+// @Router /sessions/{token}/users [post]
 func addAddUserToSessionRoute(api fiber.Router, store datastore.DataStore) {
-	api.Post("/sessions/:token/users/:name", func(c *fiber.Ctx) error {
-		if err := store.JoinSession(c.Params("token"), c.Params("name")); err != nil {
+	api.Post("/sessions/:token/users", func(c *fiber.Ctx) error {
+		u := new(User)
+
+		if err := c.BodyParser(u); err != nil {
+			data := ErrorResponse{
+				Message: "error",
+				Reason:  err.Error(),
+			}
+			return c.Status(400).JSON(data)
+		}
+
+		if err := store.JoinSession(c.Params("token"), u.Name); err != nil {
 			data := ErrorResponse{
 				Message: "error",
 				Reason:  err.Error(),
@@ -233,6 +243,7 @@ func addAddUserToSessionRoute(api fiber.Router, store datastore.DataStore) {
 
 		data := GeneralResponse{
 			Message: "ok",
+			Route:   "/sessions/" + c.Params("token") + "/users/" + u.Name,
 		}
 		return c.Status(200).JSON(data)
 	})
@@ -356,6 +367,7 @@ func addAddWorkPackageToSessionRoute(api fiber.Router, store datastore.DataStore
 
 		data := GeneralResponse{
 			Message: "ok",
+			Route:   "/sessions/" + c.Params("token") + "/workpackages/" + wp.ID,
 		}
 		return c.Status(200).JSON(data)
 	})
@@ -495,6 +507,7 @@ func addAddUserEstimateToSessionRoute(api fiber.Router, store datastore.DataStor
 
 		data := GeneralResponse{
 			Message: "ok",
+			Route:   "/sessions/" + c.Params("token") + "/estimates/" + es.UserName + "/" + es.WorkPackageID,
 		}
 		return c.Status(200).JSON(data)
 	})

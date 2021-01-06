@@ -50,6 +50,10 @@ definitions:
         example: ok
         format: string
         type: string
+      route:
+        example: /sessions/token
+        format: string
+        type: string
     type: object
   apiserver.PerUserEstimate:
     properties:
@@ -86,14 +90,10 @@ definitions:
         format: string
         type: string
     type: object
-  apiserver.SessionResponse:
+  apiserver.User:
     properties:
-      message:
-        example: ok
-        format: string
-        type: string
-      token:
-        example: "12345678901234567890123456789012"
+      name:
+        example: Tigger
         format: string
         type: string
     type: object
@@ -194,7 +194,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/apiserver.SessionResponse'
+            $ref: '#/definitions/apiserver.GeneralResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -347,6 +347,34 @@ paths:
       summary: Get the users of an existing session
       tags:
       - user
+    post:
+      description: Adds a new (non-existing) user to an existing session
+      parameters:
+      - description: Session Token
+        in: path
+        name: token
+        required: true
+        type: string
+      - description: New User
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/apiserver.User'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apiserver.GeneralResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiserver.ErrorResponse'
+      summary: Add a new user to a existing session
+      tags:
+      - user
   /sessions/{token}/users/{name}:
     delete:
       description: Removes a existing user from an existing session
@@ -373,33 +401,6 @@ paths:
           schema:
             $ref: '#/definitions/apiserver.ErrorResponse'
       summary: Remove a user from a session
-      tags:
-      - user
-    post:
-      description: Adds a new (non-existing) user to an existing session
-      parameters:
-      - description: Session Token
-        in: path
-        name: token
-        required: true
-        type: string
-      - description: Name of the user
-        in: path
-        name: name
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/apiserver.GeneralResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/apiserver.ErrorResponse'
-      summary: Add a new user to a existing session
       tags:
       - user
   /sessions/{token}/workpackages:

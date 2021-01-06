@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"regexp"
 	"testing"
 )
 
@@ -32,7 +33,7 @@ type estimate struct {
 type apiResponse struct {
 	Message      string        `json:"message"`
 	Reason       string        `json:"reason"`
-	Token        string        `json:"token"`
+	Route        string        `json:"route"`
 	Users        []string      `json:"users"`
 	Workpackages []workPackage `json:"workpackages"`
 	Estimates    []estimate    `json:"estimates"`
@@ -58,11 +59,13 @@ type testCase struct {
 var m *datastore.MockGenjiDB
 var db *genji.DB
 var td string
+var tre *regexp.Regexp
 
 func setupTestCaseForRealDB(t *testing.T) func(t *testing.T) {
 	td, _ = ioutil.TempDir("", "db-test")
 	db, _ = genji.Open(td + "/my.db")
 	db = db.WithContext(context.Background())
+	tre, _ = regexp.Compile("/sessions/([\\d|\\w]*)")
 
 	return func(t *testing.T) {
 		db.Close()
@@ -107,9 +110,12 @@ func TestAPIRoutesForErrors(t *testing.T) {
 			ExpectedCode:         500,
 		},
 		{
-			Description:          "Adding a user to a session fails due to wrong token length",
-			Route:                "/api/sessions/12345/users/Tigger",
-			Method:               "POST",
+			Description: "Adding a user to a session fails due to wrong token length",
+			Route:       "/api/sessions/12345/users",
+			Method:      "POST",
+			Body: map[string]interface{}{
+				"name": "Tigger",
+			},
 			ExpectedError:        false,
 			ExpectedErrorMessage: "Session token does not match desired length",
 			ExpectedCode:         500,
@@ -285,7 +291,9 @@ func TestSessionGetsCreatedSuccess(t *testing.T) {
 	err = decoder.Decode(&ar)
 	assert.NoError(t, err)
 	assert.Equal(t, "ok", ar.Message)
-	assert.Len(t, ar.Token, 32)
+	token := tre.FindStringSubmatch(ar.Route)[1]
+	assert.Len(t, token, 32)
+	assert.Equal(t, "/sessions/"+token, ar.Route)
 }
 
 func TestDeleteSessionSuccess(t *testing.T) {
@@ -311,7 +319,7 @@ func TestDeleteSessionSuccess(t *testing.T) {
 	err = decoder.Decode(&ar)
 	assert.NoError(t, err)
 	assert.Equal(t, "ok", ar.Message)
-	token := ar.Token
+	token := tre.FindStringSubmatch(ar.Route)[1]
 
 	req, _ = http.NewRequest(
 		"DELETE",
@@ -327,6 +335,56 @@ func TestDeleteSessionSuccess(t *testing.T) {
 	err = decoder.Decode(&ar)
 	assert.NoError(t, err)
 	assert.Equal(t, "ok", ar.Message)
+}
+
+func TestAddUserToSessionFailsDueToMissingHeader(t *testing.T) {
+	setupAndTearDown := setupTestCaseForRealDB(t)
+	defer setupAndTearDown(t)
+
+	app := NewServer(&Config{
+		Static: static{Prefix: "/public", Path: "../../static"},
+	}, db).Start()
+
+	req, _ := http.NewRequest(
+		"POST",
+		"/api/sessions",
+		nil,
+	)
+
+	res, err := app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	var ar apiResponse
+	decoder := json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", ar.Message)
+	token := tre.FindStringSubmatch(ar.Route)[1]
+
+	payloadf := map[string]interface{}{
+		"name": "Tigger",
+	}
+	body, me := json.Marshal(payloadf)
+
+	assert.NoError(t, me)
+
+	req, _ = http.NewRequest(
+		"POST",
+		"/api/sessions/"+token+"/users",
+		bytes.NewBuffer(body),
+	)
+
+	res, err = app.Test(req, -1)
+
+	assert.NoError(t, err)
+
+	decoder = json.NewDecoder(res.Body)
+	err = decoder.Decode(&ar)
+	assert.NoError(t, err)
+	assert.Equal(t, "error", ar.Message)
+	assert.Equal(t, "Unprocessable Entity", ar.Reason)
+	assert.Equal(t, 400, res.StatusCode)
 }
 
 func TestAddUserToSessionSuccess(t *testing.T) {
@@ -352,13 +410,21 @@ func TestAddUserToSessionSuccess(t *testing.T) {
 	err = decoder.Decode(&ar)
 	assert.NoError(t, err)
 	assert.Equal(t, "ok", ar.Message)
-	token := ar.Token
+	token := tre.FindStringSubmatch(ar.Route)[1]
+
+	payload := map[string]string{
+		"name": "Tigger",
+	}
+	body, me := json.Marshal(payload)
+
+	assert.NoError(t, me)
 
 	req, _ = http.NewRequest(
 		"POST",
-		"/api/sessions/"+token+"/users/Tigger",
-		nil,
+		"/api/sessions/"+token+"/users",
+		bytes.NewBuffer(body),
 	)
+	req.Header.Set("Content-Type", "application/json")
 
 	res, err = app.Test(req, -1)
 
@@ -368,6 +434,7 @@ func TestAddUserToSessionSuccess(t *testing.T) {
 	err = decoder.Decode(&ar)
 	assert.NoError(t, err)
 	assert.Equal(t, "ok", ar.Message)
+	assert.Equal(t, "/sessions/"+token+"/users/Tigger", ar.Route)
 
 	req, _ = http.NewRequest(
 		"GET",
@@ -410,13 +477,21 @@ func TestAddUserToSessionFailsDueToUserExists(t *testing.T) {
 	err = decoder.Decode(&ar)
 	assert.NoError(t, err)
 	assert.Equal(t, "ok", ar.Message)
-	token := ar.Token
+	token := tre.FindStringSubmatch(ar.Route)[1]
+
+	payload := map[string]string{
+		"name": "Tigger",
+	}
+	body, me := json.Marshal(payload)
+
+	assert.NoError(t, me)
 
 	req, _ = http.NewRequest(
 		"POST",
-		"/api/sessions/"+token+"/users/Tigger",
-		nil,
+		"/api/sessions/"+token+"/users",
+		bytes.NewBuffer(body),
 	)
+	req.Header.Set("Content-Type", "application/json")
 
 	res, err = app.Test(req, -1)
 
@@ -426,12 +501,6 @@ func TestAddUserToSessionFailsDueToUserExists(t *testing.T) {
 	err = decoder.Decode(&ar)
 	assert.NoError(t, err)
 	assert.Equal(t, "ok", ar.Message)
-
-	req, _ = http.NewRequest(
-		"POST",
-		"/api/sessions/"+token+"/users/Tigger",
-		nil,
-	)
 
 	res, err = app.Test(req, -1)
 
@@ -467,13 +536,21 @@ func TestAddMultipleUsersToSessionSuccess(t *testing.T) {
 	err = decoder.Decode(&ar)
 	assert.NoError(t, err)
 	assert.Equal(t, "ok", ar.Message)
-	token := ar.Token
+	token := tre.FindStringSubmatch(ar.Route)[1]
+
+	payload := map[string]string{
+		"name": "Tigger",
+	}
+	body, me := json.Marshal(payload)
+
+	assert.NoError(t, me)
 
 	req, _ = http.NewRequest(
 		"POST",
-		"/api/sessions/"+token+"/users/Tigger",
-		nil,
+		"/api/sessions/"+token+"/users",
+		bytes.NewBuffer(body),
 	)
+	req.Header.Set("Content-Type", "application/json")
 
 	res, err = app.Test(req, -1)
 
@@ -484,11 +561,19 @@ func TestAddMultipleUsersToSessionSuccess(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "ok", ar.Message)
 
+	payload = map[string]string{
+		"name": "Rabbit",
+	}
+	body, me = json.Marshal(payload)
+
+	assert.NoError(t, me)
+
 	req, _ = http.NewRequest(
 		"POST",
-		"/api/sessions/"+token+"/users/Rabbit",
-		nil,
+		"/api/sessions/"+token+"/users",
+		bytes.NewBuffer(body),
 	)
+	req.Header.Set("Content-Type", "application/json")
 
 	res, err = app.Test(req, -1)
 
@@ -541,13 +626,21 @@ func TestRemoveUserFromSessionSuccess(t *testing.T) {
 	err = decoder.Decode(&ar)
 	assert.NoError(t, err)
 	assert.Equal(t, "ok", ar.Message)
-	token := ar.Token
+	token := tre.FindStringSubmatch(ar.Route)[1]
+
+	payload := map[string]string{
+		"name": "Tigger",
+	}
+	body, me := json.Marshal(payload)
+
+	assert.NoError(t, me)
 
 	req, _ = http.NewRequest(
 		"POST",
-		"/api/sessions/"+token+"/users/Tigger",
-		nil,
+		"/api/sessions/"+token+"/users",
+		bytes.NewBuffer(body),
 	)
+	req.Header.Set("Content-Type", "application/json")
 
 	res, err = app.Test(req, -1)
 
@@ -558,11 +651,19 @@ func TestRemoveUserFromSessionSuccess(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "ok", ar.Message)
 
+	payload = map[string]string{
+		"name": "Rabbit",
+	}
+	body, me = json.Marshal(payload)
+
+	assert.NoError(t, me)
+
 	req, _ = http.NewRequest(
 		"POST",
-		"/api/sessions/"+token+"/users/Rabbit",
-		nil,
+		"/api/sessions/"+token+"/users",
+		bytes.NewBuffer(body),
 	)
+	req.Header.Set("Content-Type", "application/json")
 
 	res, err = app.Test(req, -1)
 
@@ -647,7 +748,7 @@ func TestAddWorkPackagesToSessionSuccess(t *testing.T) {
 	err = decoder.Decode(&ar)
 	assert.NoError(t, err)
 	assert.Equal(t, "ok", ar.Message)
-	token := ar.Token
+	token := tre.FindStringSubmatch(ar.Route)[1]
 
 	payload := map[string]string{
 		"id": "TEST01",
@@ -740,7 +841,7 @@ func TestAddWorkPackageToSessionFailsDueToMissingHeader(t *testing.T) {
 	err = decoder.Decode(&ar)
 	assert.NoError(t, err)
 	assert.Equal(t, "ok", ar.Message)
-	token := ar.Token
+	token := tre.FindStringSubmatch(ar.Route)[1]
 
 	payload := map[string]string{
 		"id": "TEST01",
@@ -790,7 +891,7 @@ func TestRemoveWorkPackageFromSessionSuccess(t *testing.T) {
 	err = decoder.Decode(&ar)
 	assert.NoError(t, err)
 	assert.Equal(t, "ok", ar.Message)
-	token := ar.Token
+	token := tre.FindStringSubmatch(ar.Route)[1]
 
 	payload := map[string]string{
 		"id": "TEST01",
@@ -916,7 +1017,7 @@ func TestAddAndRemoveEstimateToFromWorkPackageSuccess(t *testing.T) {
 	err = decoder.Decode(&ar)
 	assert.NoError(t, err)
 	assert.Equal(t, "ok", ar.Message)
-	token := ar.Token
+	token := tre.FindStringSubmatch(ar.Route)[1]
 
 	payload := map[string]string{
 		"id": "TEST01",
@@ -1123,7 +1224,7 @@ func TestAddEstimateToWorkPackageFailsDueToMissingHeader(t *testing.T) {
 	err = decoder.Decode(&ar)
 	assert.NoError(t, err)
 	assert.Equal(t, "ok", ar.Message)
-	token := ar.Token
+	token := tre.FindStringSubmatch(ar.Route)[1]
 
 	payload := map[string]string{
 		"id": "TEST01",
@@ -1196,7 +1297,7 @@ func TestAddEstimateToSessionFailsDueToMissingHeader(t *testing.T) {
 	err = decoder.Decode(&ar)
 	assert.NoError(t, err)
 	assert.Equal(t, "ok", ar.Message)
-	token := ar.Token
+	token := tre.FindStringSubmatch(ar.Route)[1]
 
 	payloadf := map[string]interface{}{
 		"id":   "TEST01",
@@ -1250,7 +1351,7 @@ func TestAddAndRemoveEstimateToFromSessionSuccess(t *testing.T) {
 	err = decoder.Decode(&ar)
 	assert.NoError(t, err)
 	assert.Equal(t, "ok", ar.Message)
-	token := ar.Token
+	token := tre.FindStringSubmatch(ar.Route)[1]
 
 	payload := map[string]string{
 		"id": "TEST01",
@@ -1299,11 +1400,19 @@ func TestAddAndRemoveEstimateToFromSessionSuccess(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "ok", ar.Message)
 
+	payload = map[string]string{
+		"name": "Tigger",
+	}
+	body, me = json.Marshal(payload)
+
+	assert.NoError(t, me)
+
 	req, _ = http.NewRequest(
 		"POST",
-		"/api/sessions/"+token+"/users/Tigger",
-		nil,
+		"/api/sessions/"+token+"/users",
+		bytes.NewBuffer(body),
 	)
+	req.Header.Set("Content-Type", "application/json")
 
 	res, err = app.Test(req, -1)
 
@@ -1314,11 +1423,19 @@ func TestAddAndRemoveEstimateToFromSessionSuccess(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "ok", ar.Message)
 
+	payload = map[string]string{
+		"name": "Rabbit",
+	}
+	body, me = json.Marshal(payload)
+
+	assert.NoError(t, me)
+
 	req, _ = http.NewRequest(
 		"POST",
-		"/api/sessions/"+token+"/users/Rabbit",
-		nil,
+		"/api/sessions/"+token+"/users",
+		bytes.NewBuffer(body),
 	)
+	req.Header.Set("Content-Type", "application/json")
 
 	res, err = app.Test(req, -1)
 
