@@ -50,15 +50,50 @@ definitions:
         example: ok
         format: string
         type: string
+      route:
+        example: /sessions/token
+        format: string
+        type: string
     type: object
-  apiserver.SessionResponse:
+  apiserver.PerUserEstimate:
     properties:
+      b:
+        example: 1.5
+        format: float64
+        type: number
+      id:
+        example: TEST01
+        format: string
+        type: string
+      m:
+        example: 2
+        format: float64
+        type: number
+      user:
+        example: Tigger
+        format: string
+        type: string
+      w:
+        example: 3.6
+        format: float64
+        type: number
+    type: object
+  apiserver.PerUserEstimateResponse:
+    properties:
+      estimates:
+        format: '[]datastore.Estimate'
+        items:
+          $ref: '#/definitions/datastore.Estimate'
+        type: array
       message:
         example: ok
         format: string
         type: string
-      token:
-        example: "12345678901234567890123456789012"
+    type: object
+  apiserver.User:
+    properties:
+      name:
+        example: Tigger
         format: string
         type: string
     type: object
@@ -99,6 +134,19 @@ definitions:
         items:
           $ref: '#/definitions/datastore.WorkPackage'
         type: array
+    type: object
+  datastore.Estimate:
+    properties:
+      bestCase:
+        type: number
+      mostLikelyCase:
+        type: number
+      userName:
+        type: string
+      workPackageID:
+        type: string
+      worstCase:
+        type: number
     type: object
   datastore.WorkPackage:
     properties:
@@ -146,7 +194,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/apiserver.SessionResponse'
+            $ref: '#/definitions/apiserver.GeneralResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -177,6 +225,105 @@ paths:
       summary: Delete a existing Doker session
       tags:
       - session
+  /sessions/{token}/estimates:
+    get:
+      description: Gets all estimates of all existing users of all existing work packages
+        inside a existing session
+      parameters:
+      - description: Session Token
+        in: path
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apiserver.PerUserEstimateResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apiserver.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiserver.ErrorResponse'
+      summary: Get the estimates of all users for all work packages
+      tags:
+      - estimate
+    post:
+      description: Adds a estimate of a existing user of a existing work package inside
+        a existing session
+      parameters:
+      - description: Session Token
+        in: path
+        name: token
+        required: true
+        type: string
+      - description: New Estimate
+        in: body
+        name: estimate
+        required: true
+        schema:
+          $ref: '#/definitions/apiserver.PerUserEstimate'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apiserver.GeneralResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apiserver.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiserver.ErrorResponse'
+      summary: Add the estimate of a user for a work package
+      tags:
+      - estimate
+  /sessions/{token}/estimates/{user}/{id}:
+    delete:
+      description: Removes a estimate of a existing user of a existing work package
+        inside a existing session
+      parameters:
+      - description: Session Token
+        in: path
+        name: token
+        required: true
+        type: string
+      - description: User Name
+        in: path
+        name: user
+        required: true
+        type: string
+      - description: Work Package ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apiserver.GeneralResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apiserver.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiserver.ErrorResponse'
+      summary: Remove the estimate of a user for a work package
+      tags:
+      - estimate
   /sessions/{token}/users:
     get:
       description: Gets all users of an existing session
@@ -198,6 +345,34 @@ paths:
           schema:
             $ref: '#/definitions/apiserver.ErrorResponse'
       summary: Get the users of an existing session
+      tags:
+      - user
+    post:
+      description: Adds a new (non-existing) user to an existing session
+      parameters:
+      - description: Session Token
+        in: path
+        name: token
+        required: true
+        type: string
+      - description: New User
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/apiserver.User'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apiserver.GeneralResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiserver.ErrorResponse'
+      summary: Add a new user to a existing session
       tags:
       - user
   /sessions/{token}/users/{name}:
@@ -226,33 +401,6 @@ paths:
           schema:
             $ref: '#/definitions/apiserver.ErrorResponse'
       summary: Remove a user from a session
-      tags:
-      - user
-    post:
-      description: Adds a new (non-existing) user to an existing session
-      parameters:
-      - description: Session Token
-        in: path
-        name: token
-        required: true
-        type: string
-      - description: Name of the user
-        in: path
-        name: name
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/apiserver.GeneralResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/apiserver.ErrorResponse'
-      summary: Add a new user to a existing session
       tags:
       - user
   /sessions/{token}/workpackages:
