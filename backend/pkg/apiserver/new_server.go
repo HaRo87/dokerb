@@ -11,14 +11,14 @@ import (
 // APIServer struct
 type APIServer struct {
 	config *Config
-	db     datastore.GenjiDB
+	ds     datastore.DataStore
 }
 
 // NewServer method for init new server instance
-func NewServer(config *Config, db datastore.GenjiDB) *APIServer {
+func NewServer(config *Config, ds datastore.DataStore) *APIServer {
 	return &APIServer{
 		config: config,
-		db:     db,
+		ds:     ds,
 	}
 }
 
@@ -45,13 +45,8 @@ func (s *APIServer) Start() *fiber.App {
 		app.Static(s.config.Static.Prefix, s.config.Static.Path)
 	}
 
-	gds, gerr := datastore.NewGenjiDatastore(s.db)
-	if gerr != nil {
-		panic("Unable to create new datastore")
-	}
-
 	// Register API routes
-	Routes(app, gds)
+	Routes(app, s.ds)
 
 	return app
 }

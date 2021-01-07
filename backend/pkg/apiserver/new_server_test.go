@@ -71,8 +71,8 @@ func TestAPIRoutes(t *testing.T) {
 
 	td, _ := ioutil.TempDir("", "db-test")
 
-	m := new(datastore.MockGenjiDB)
-	m.On("Exec", "CREATE TABLE sessions").Return(nil)
+	m := new(datastore.MockDatastore)
+	m.On("CreateSession").Return("", nil)
 	// Start the app as it is done in the main function
 	app1 := NewServer(&Config{
 		Database: database{Location: td + "/my.db"},
