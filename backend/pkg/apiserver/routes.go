@@ -132,6 +132,8 @@ func Routes(app *fiber.App, store datastore.DataStore) {
 	addGetUserEstimatesFromSessionRoute(APIGroup, store)
 
 	addGetAverageEstimateForWorkPackageFromSessionRoute(APIGroup, store)
+
+	addGetUserWithMaxEstimateDistanceForWorkPackageFromSessionRoute(APIGroup, store)
 }
 
 // Adding the documentation route
@@ -664,6 +666,58 @@ func addGetAverageEstimateForWorkPackageFromSessionRoute(api fiber.Router, store
 				Effort:            avge.GetEffort(),
 				StandardDeviation: avge.GetStandardDeviation(),
 			},
+		}
+		return c.Status(200).JSON(data)
+	})
+}
+
+// Adding the Get max distance users for estimate from session route
+// @Summary Get the users with max distance between their estimates for a specific work package
+// @Description Gets the users with max distance in their estimates of a existing work package inside a existing session
+// @Tags estimate
+// @Produce  json
+// @Param token path string true "Session Token"
+// @Param id path string true "Work Package ID"
+// @Success 200 {object} UsersResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /sessions/{token}/estimates/{id}/users/distance [get]
+func addGetUserWithMaxEstimateDistanceForWorkPackageFromSessionRoute(api fiber.Router, store datastore.DataStore) {
+	api.Get("/sessions/:token/estimates/:id/users/distance", func(c *fiber.Ctx) error {
+
+		ests, e := store.GetEstimates(c.Params("token"))
+
+		if e != nil {
+			data := ErrorResponse{
+				Message: "error",
+				Reason:  e.Error(),
+			}
+			return c.Status(500).JSON(data)
+		}
+
+		ests, e = compute.ExtractEstimatesForWorkPackage(ests, c.Params("id"))
+
+		if e != nil {
+			data := ErrorResponse{
+				Message: "error",
+				Reason:  e.Error(),
+			}
+			return c.Status(500).JSON(data)
+		}
+
+		users, ae := compute.GetUsersWithMaxDistanceBetweenEffort(ests, c.Params("id"))
+
+		if ae != nil {
+			data := ErrorResponse{
+				Message: "error",
+				Reason:  ae.Error(),
+			}
+			return c.Status(500).JSON(data)
+		}
+
+		data := UsersResponse{
+			Message: "ok",
+			Users:   users,
 		}
 		return c.Status(200).JSON(data)
 	})

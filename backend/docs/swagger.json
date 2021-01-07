@@ -234,6 +234,54 @@
                 }
             }
         },
+        "/sessions/{token}/estimates/{id}/users/distance": {
+            "get": {
+                "description": "Gets the users with max distance in their estimates of a existing work package inside a existing session",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "estimate"
+                ],
+                "summary": "Get the users with max distance between their estimates for a specific work package",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session Token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Work Package ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apiserver.UsersResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apiserver.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apiserver.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/sessions/{token}/estimates/{user}/{id}": {
             "delete": {
                 "description": "Removes a estimate of a existing user of a existing work package inside a existing session",
