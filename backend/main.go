@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/genjidb/genji"
 	"github.com/haro87/dokerb/pkg/apiserver"
+	"github.com/haro87/dokerb/pkg/datastore"
 	"log"
 	"os"
 	"os/signal"
@@ -24,8 +25,13 @@ func main() {
 	}
 	db = db.WithContext(context.Background())
 	defer db.Close()
+
+	gds, gerr := datastore.NewGenjiDatastore(db)
+	if gerr != nil {
+		panic("Unable to create new datastore")
+	}
 	// Create new server.
-	server := apiserver.NewServer(config, db).Start()
+	server := apiserver.NewServer(config, gds).Start()
 
 	// Create channel for idle connections.
 	idleConnsClosed := make(chan struct{})
