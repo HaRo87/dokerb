@@ -1,4 +1,5 @@
 # Delphi Planning Poker (Doker) Backend
+![DokerB Logo](backend/static/img/Doker_Logo_DokerB_small.png?raw=true)
 
 ![Testing Go Code](https://github.com/HaRo87/dokerb/workflows/Testing%20Go%20Code/badge.svg?branch=main&event=push)
 [![codecov](https://codecov.io/gh/HaRo87/dokerb/branch/main/graph/badge.svg?token=YNELZZ65S1)](https://codecov.io/gh/HaRo87/dokerb)
