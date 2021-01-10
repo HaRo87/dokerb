@@ -92,6 +92,17 @@ static:
   path: ./static
 ```
 
+## Docker Container
+
+In case you want to run DokerB in a Docker container you can use the 
+Dockerfile located inside the `backend` directory. 
+
+Just run:
+
+```bash
+docker build -t dokerb .
+```
+
 ## ⚠️ License
 
 MIT &copy; [HaRo87](https://github.com/HaRo87).
