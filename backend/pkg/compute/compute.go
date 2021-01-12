@@ -8,7 +8,7 @@ import (
 )
 
 // CalculateAverageEstimate calculates the average estimate of all provided
-// estimates matching a given work package ID
+// estimates matching a given task ID
 func CalculateAverageEstimate(estimates []datastore.Estimate, id string) (estimate.Estimator, error) {
 	ests, err := ExtractEstimatesForTask(estimates, id)
 
@@ -69,7 +69,7 @@ func GetUsersWithMaxDistanceBetweenEffort(estimates []datastore.Estimate, id str
 }
 
 // ExtractEstimatesForTask extracts all estimates for a specified
-// work package ID
+// task ID
 func ExtractEstimatesForTask(estimates []datastore.Estimate, id string) ([]datastore.Estimate, error) {
 	if id == "" {
 		return []datastore.Estimate{}, fmt.Errorf("Task ID cannot be empty")

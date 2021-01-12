@@ -111,6 +111,29 @@ definitions:
         format: string
         type: string
     type: object
+  apiserver.Task:
+    properties:
+      id:
+        example: TEST01
+        format: string
+        type: string
+      summary:
+        example: a sample task
+        format: string
+        type: string
+    type: object
+  apiserver.TaskResponse:
+    properties:
+      message:
+        example: ok
+        format: string
+        type: string
+      tasks:
+        format: '[]datastore.Task'
+        items:
+          $ref: '#/definitions/datastore.Task'
+        type: array
+    type: object
   apiserver.User:
     properties:
       name:
@@ -133,43 +156,20 @@ definitions:
           type: string
         type: array
     type: object
-  apiserver.WorkPackage:
-    properties:
-      id:
-        example: TEST01
-        format: string
-        type: string
-      summary:
-        example: a sample task
-        format: string
-        type: string
-    type: object
-  apiserver.WorkPackagesResponse:
-    properties:
-      message:
-        example: ok
-        format: string
-        type: string
-      workpackages:
-        format: '[]datastore.WorkPackage'
-        items:
-          $ref: '#/definitions/datastore.WorkPackage'
-        type: array
-    type: object
   datastore.Estimate:
     properties:
       bestCase:
         type: number
       mostLikelyCase:
         type: number
-      userName:
+      taskID:
         type: string
-      workPackageID:
+      userName:
         type: string
       worstCase:
         type: number
     type: object
-  datastore.WorkPackage:
+  datastore.Task:
     properties:
       effort:
         type: number
@@ -248,7 +248,7 @@ paths:
       - session
   /sessions/{token}/estimates:
     get:
-      description: Gets all estimates of all existing users of all existing work packages
+      description: Gets all estimates of all existing users of all existing tasks
         inside a existing session
       parameters:
       - description: Session Token
@@ -271,12 +271,12 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/apiserver.ErrorResponse'
-      summary: Get the estimates of all users for all work packages
+      summary: Get the estimates of all users for all tasks
       tags:
       - estimate
     post:
-      description: Adds a estimate of a existing user of a existing work package inside
-        a existing session
+      description: Adds a estimate of a existing user of a existing task inside a
+        existing session
       parameters:
       - description: Session Token
         in: path
@@ -304,20 +304,20 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/apiserver.ErrorResponse'
-      summary: Add the estimate of a user for a work package
+      summary: Add the estimate of a user for a task
       tags:
       - estimate
   /sessions/{token}/estimates/{id}:
     get:
-      description: Gets the average estimate of all existing users of a existing work
-        package inside a existing session
+      description: Gets the average estimate of all existing users of a existing task
+        inside a existing session
       parameters:
       - description: Session Token
         in: path
         name: token
         required: true
         type: string
-      - description: Work Package ID
+      - description: Task ID
         in: path
         name: id
         required: true
@@ -337,20 +337,20 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/apiserver.ErrorResponse'
-      summary: Get the average estimate of all users for a specific work package
+      summary: Get the average estimate of all users for a specific task
       tags:
       - estimate
   /sessions/{token}/estimates/{id}/users/distance:
     get:
       description: Gets the users with max distance in their estimates of a existing
-        work package inside a existing session
+        task inside a existing session
       parameters:
       - description: Session Token
         in: path
         name: token
         required: true
         type: string
-      - description: Work Package ID
+      - description: Task ID
         in: path
         name: id
         required: true
@@ -371,13 +371,13 @@ paths:
           schema:
             $ref: '#/definitions/apiserver.ErrorResponse'
       summary: Get the users with max distance between their estimates for a specific
-        work package
+        task
       tags:
       - estimate
   /sessions/{token}/estimates/{user}/{id}:
     delete:
-      description: Removes a estimate of a existing user of a existing work package
-        inside a existing session
+      description: Removes a estimate of a existing user of a existing task inside
+        a existing session
       parameters:
       - description: Session Token
         in: path
@@ -389,7 +389,7 @@ paths:
         name: user
         required: true
         type: string
-      - description: Work Package ID
+      - description: Task ID
         in: path
         name: id
         required: true
@@ -409,9 +409,157 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/apiserver.ErrorResponse'
-      summary: Remove the estimate of a user for a work package
+      summary: Remove the estimate of a user for a task
       tags:
       - estimate
+  /sessions/{token}/tasks:
+    get:
+      description: Gets all tasks of an existing session
+      parameters:
+      - description: Session Token
+        in: path
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apiserver.TaskResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiserver.ErrorResponse'
+      summary: Get the tasks of a session
+      tags:
+      - task
+    post:
+      description: Adds a new (non-existing) task to an existing session
+      parameters:
+      - description: Session Token
+        in: path
+        name: token
+        required: true
+        type: string
+      - description: New Task
+        in: body
+        name: task
+        required: true
+        schema:
+          $ref: '#/definitions/apiserver.Task'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apiserver.GeneralResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apiserver.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiserver.ErrorResponse'
+      summary: Add a new task to a existing session
+      tags:
+      - task
+  /sessions/{token}/tasks/{id}:
+    delete:
+      description: Removes a existing task from an existing session
+      parameters:
+      - description: Session Token
+        in: path
+        name: token
+        required: true
+        type: string
+      - description: ID of the task
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apiserver.GeneralResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiserver.ErrorResponse'
+      summary: Remove a task from a session
+      tags:
+      - task
+    put:
+      description: Updates a estimate of a existing task inside a existing session
+      parameters:
+      - description: Session Token
+        in: path
+        name: token
+        required: true
+        type: string
+      - description: ID of the task
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: New Estimate
+        in: body
+        name: estimate
+        required: true
+        schema:
+          $ref: '#/definitions/apiserver.Estimate'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apiserver.GeneralResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apiserver.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiserver.ErrorResponse'
+      summary: Update the estimate of a task
+      tags:
+      - task
+  /sessions/{token}/tasks/{id}/estimate:
+    delete:
+      description: Removes the estimate from an existing task
+      parameters:
+      - description: Session Token
+        in: path
+        name: token
+        required: true
+        type: string
+      - description: ID of the task
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apiserver.GeneralResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiserver.ErrorResponse'
+      summary: Delete the estimate from a task
+      tags:
+      - task
   /sessions/{token}/users:
     get:
       description: Gets all users of an existing session
@@ -491,153 +639,4 @@ paths:
       summary: Remove a user from a session
       tags:
       - user
-  /sessions/{token}/workpackages:
-    get:
-      description: Gets all work packages of an existing session
-      parameters:
-      - description: Session Token
-        in: path
-        name: token
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/apiserver.WorkPackagesResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/apiserver.ErrorResponse'
-      summary: Get the work packages of a session
-      tags:
-      - workpackage
-    post:
-      description: Adds a new (non-existing) work package to an existing session
-      parameters:
-      - description: Session Token
-        in: path
-        name: token
-        required: true
-        type: string
-      - description: New Work Package
-        in: body
-        name: workpackage
-        required: true
-        schema:
-          $ref: '#/definitions/apiserver.WorkPackage'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/apiserver.GeneralResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/apiserver.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/apiserver.ErrorResponse'
-      summary: Add a new work package to a existing session
-      tags:
-      - workpackage
-  /sessions/{token}/workpackages/{id}:
-    delete:
-      description: Removes a existing work package from an existing session
-      parameters:
-      - description: Session Token
-        in: path
-        name: token
-        required: true
-        type: string
-      - description: ID of the work package
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/apiserver.GeneralResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/apiserver.ErrorResponse'
-      summary: Remove a work package from a session
-      tags:
-      - workpackage
-    put:
-      description: Updates a estimate of a existing work package inside a existing
-        session
-      parameters:
-      - description: Session Token
-        in: path
-        name: token
-        required: true
-        type: string
-      - description: ID of the work package
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: New Estimate
-        in: body
-        name: estimate
-        required: true
-        schema:
-          $ref: '#/definitions/apiserver.Estimate'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/apiserver.GeneralResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/apiserver.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/apiserver.ErrorResponse'
-      summary: Update the estimate of a work package
-      tags:
-      - workpackage
-  /sessions/{token}/workpackages/{id}/estimate:
-    delete:
-      description: Removes the estimate from an existing work package
-      parameters:
-      - description: Session Token
-        in: path
-        name: token
-        required: true
-        type: string
-      - description: ID of the work package
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/apiserver.GeneralResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/apiserver.ErrorResponse'
-      summary: Delete the estimate from a work package
-      tags:
-      - workpackage
 swagger: "2.0"

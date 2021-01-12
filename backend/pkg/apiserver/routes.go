@@ -324,7 +324,7 @@ func addRemoveUserFromSessionRoute(api fiber.Router, store datastore.DataStore) 
 // @Tags task
 // @Produce  json
 // @Param token path string true "Session Token"
-// @Success 200 {object} TasksResponse
+// @Success 200 {object} TaskResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /sessions/{token}/tasks [get]
 func addGetTasksFromSessionRoute(api fiber.Router, store datastore.DataStore) {
