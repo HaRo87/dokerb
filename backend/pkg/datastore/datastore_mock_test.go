@@ -115,112 +115,112 @@ func TestRemoveSessionError(t *testing.T) {
 	m.MethodCalled("RemoveSession", "12345")
 }
 
-func TestAddWorkPackageNoError(t *testing.T) {
+func TestAddTaskNoError(t *testing.T) {
 	var ds DataStore
 	m := new(MockDatastore)
 	ds = m
 
-	m.On("AddWorkPackage", "12345", "TEST01", "").Return(nil)
+	m.On("AddTask", "12345", "TEST01", "").Return(nil)
 
-	err := ds.AddWorkPackage("12345", "TEST01", "")
+	err := ds.AddTask("12345", "TEST01", "")
 
 	assert.NoError(t, err)
-	m.MethodCalled("AddWorkPackage", "12345", "TEST01", "")
+	m.MethodCalled("AddTask", "12345", "TEST01", "")
 }
 
-func TestAddWorkPackageError(t *testing.T) {
+func TestAddTaskError(t *testing.T) {
 	var ds DataStore
 	m := new(MockDatastore)
 	ds = m
 
-	m.On("AddWorkPackage", "12345", "TEST01", "").Return(fmt.Errorf("Some error"))
+	m.On("AddTask", "12345", "TEST01", "").Return(fmt.Errorf("Some error"))
 
-	err := ds.AddWorkPackage("12345", "TEST01", "")
+	err := ds.AddTask("12345", "TEST01", "")
 
 	assert.Error(t, err)
 	assert.Equal(t, "Some error", err.Error())
-	m.MethodCalled("AddWorkPackage", "12345", "TEST01", "")
+	m.MethodCalled("AddTask", "12345", "TEST01", "")
 }
 
-func TestRemoveWorkPackageNoError(t *testing.T) {
+func TestRemoveTaskNoError(t *testing.T) {
 	var ds DataStore
 	m := new(MockDatastore)
 	ds = m
 
-	m.On("RemoveWorkPackage", "12345", "TEST01").Return(nil)
+	m.On("RemoveTask", "12345", "TEST01").Return(nil)
 
-	err := ds.RemoveWorkPackage("12345", "TEST01")
+	err := ds.RemoveTask("12345", "TEST01")
 
 	assert.NoError(t, err)
-	m.MethodCalled("RemoveWorkPackage", "12345", "TEST01")
+	m.MethodCalled("RemoveTask", "12345", "TEST01")
 }
 
-func TestRemoveWorkPackageError(t *testing.T) {
+func TestRemoveTaskError(t *testing.T) {
 	var ds DataStore
 	m := new(MockDatastore)
 	ds = m
 
-	m.On("RemoveWorkPackage", "12345", "TEST01").Return(fmt.Errorf("Some error"))
+	m.On("RemoveTask", "12345", "TEST01").Return(fmt.Errorf("Some error"))
 
-	err := ds.RemoveWorkPackage("12345", "TEST01")
+	err := ds.RemoveTask("12345", "TEST01")
 
 	assert.Error(t, err)
 	assert.Equal(t, "Some error", err.Error())
-	m.MethodCalled("RemoveWorkPackage", "12345", "TEST01")
+	m.MethodCalled("RemoveTask", "12345", "TEST01")
 }
 
-func TestAddEstimateToWorkPackageNoError(t *testing.T) {
+func TestAddEstimateToTaskNoError(t *testing.T) {
 	var ds DataStore
 	m := new(MockDatastore)
 	ds = m
 
-	m.On("AddEstimateToWorkPackage", "12345", "TEST01", 0.1, 0.2).Return(nil)
+	m.On("AddEstimateToTask", "12345", "TEST01", 0.1, 0.2).Return(nil)
 
-	err := ds.AddEstimateToWorkPackage("12345", "TEST01", 0.1, 0.2)
+	err := ds.AddEstimateToTask("12345", "TEST01", 0.1, 0.2)
 
 	assert.NoError(t, err)
-	m.MethodCalled("AddEstimateToWorkPackage", "12345", "TEST01", 0.1, 0.2)
+	m.MethodCalled("AddEstimateToTask", "12345", "TEST01", 0.1, 0.2)
 }
 
-func TestAddEstimateToWorkPackageError(t *testing.T) {
+func TestAddEstimateToTaskError(t *testing.T) {
 	var ds DataStore
 	m := new(MockDatastore)
 	ds = m
 
-	m.On("AddEstimateToWorkPackage", "12345", "TEST01", 0.1, 0.2).Return(fmt.Errorf("Some error"))
+	m.On("AddEstimateToTask", "12345", "TEST01", 0.1, 0.2).Return(fmt.Errorf("Some error"))
 
-	err := ds.AddEstimateToWorkPackage("12345", "TEST01", 0.1, 0.2)
+	err := ds.AddEstimateToTask("12345", "TEST01", 0.1, 0.2)
 
 	assert.Error(t, err)
 	assert.Equal(t, "Some error", err.Error())
-	m.MethodCalled("AddEstimateToWorkPackage", "12345", "TEST01", 0.1, 0.2)
+	m.MethodCalled("AddEstimateToTask", "12345", "TEST01", 0.1, 0.2)
 }
 
-func RemoveEstimateFromWorkPackage(t *testing.T) {
+func RemoveEstimateFromTask(t *testing.T) {
 	var ds DataStore
 	m := new(MockDatastore)
 	ds = m
 
-	m.On("RemoveEstimateFromWorkPackage", "12345", "TEST01").Return(nil)
+	m.On("RemoveEstimateFromTask", "12345", "TEST01").Return(nil)
 
-	err := ds.RemoveEstimateFromWorkPackage("12345", "TEST01")
+	err := ds.RemoveEstimateFromTask("12345", "TEST01")
 
 	assert.NoError(t, err)
-	m.MethodCalled("RemoveEstimateFromWorkPackage", "12345", "TEST01")
+	m.MethodCalled("RemoveEstimateFromTask", "12345", "TEST01")
 }
 
-func TestRemoveEstimateFromWorkPackageError(t *testing.T) {
+func TestRemoveEstimateFromTaskError(t *testing.T) {
 	var ds DataStore
 	m := new(MockDatastore)
 	ds = m
 
-	m.On("RemoveEstimateFromWorkPackage", "12345", "TEST01").Return(fmt.Errorf("Some error"))
+	m.On("RemoveEstimateFromTask", "12345", "TEST01").Return(fmt.Errorf("Some error"))
 
-	err := ds.RemoveEstimateFromWorkPackage("12345", "TEST01")
+	err := ds.RemoveEstimateFromTask("12345", "TEST01")
 
 	assert.Error(t, err)
 	assert.Equal(t, "Some error", err.Error())
-	m.MethodCalled("RemoveEstimateFromWorkPackage", "12345", "TEST01")
+	m.MethodCalled("RemoveEstimateFromTask", "12345", "TEST01")
 }
 
 func TestGetUsersNoError(t *testing.T) {
@@ -251,32 +251,32 @@ func TestGetUsersError(t *testing.T) {
 	m.MethodCalled("GetUsers", "12345")
 }
 
-func TestGetWorkPackagesNoError(t *testing.T) {
+func TestGetTasksNoError(t *testing.T) {
 	var ds DataStore
 	m := new(MockDatastore)
 	ds = m
 
-	m.On("GetWorkPackages", "12345").Return([]WorkPackage{WorkPackage{ID: "TEST01"}}, nil)
+	m.On("GetTasks", "12345").Return([]Task{Task{ID: "TEST01"}}, nil)
 
-	res, err := ds.GetWorkPackages("12345")
+	res, err := ds.GetTasks("12345")
 
 	assert.NoError(t, err)
 	assert.Equal(t, "TEST01", res[0].ID)
-	m.MethodCalled("GetWorkPackages", "12345")
+	m.MethodCalled("GetTasks", "12345")
 }
 
-func TestGetWorkPackagesError(t *testing.T) {
+func TestGetTasksError(t *testing.T) {
 	var ds DataStore
 	m := new(MockDatastore)
 	ds = m
 
-	m.On("GetWorkPackages", "12345").Return([]WorkPackage{}, fmt.Errorf("Some error"))
+	m.On("GetTasks", "12345").Return([]Task{}, fmt.Errorf("Some error"))
 
-	_, err := ds.GetWorkPackages("12345")
+	_, err := ds.GetTasks("12345")
 
 	assert.Error(t, err)
 	assert.Equal(t, "Some error", err.Error())
-	m.MethodCalled("GetWorkPackages", "12345")
+	m.MethodCalled("GetTasks", "12345")
 }
 
 func TestAddEstimateNoError(t *testing.T) {
@@ -284,12 +284,12 @@ func TestAddEstimateNoError(t *testing.T) {
 	m := new(MockDatastore)
 	ds = m
 
-	m.On("AddEstimate", "12345", Estimate{WorkPackageID: "TEST01"}).Return(nil)
+	m.On("AddEstimate", "12345", Estimate{TaskID: "TEST01"}).Return(nil)
 
-	err := ds.AddEstimate("12345", Estimate{WorkPackageID: "TEST01"})
+	err := ds.AddEstimate("12345", Estimate{TaskID: "TEST01"})
 
 	assert.NoError(t, err)
-	m.MethodCalled("AddEstimate", "12345", Estimate{WorkPackageID: "TEST01"})
+	m.MethodCalled("AddEstimate", "12345", Estimate{TaskID: "TEST01"})
 }
 
 func TestAddEstimateError(t *testing.T) {
@@ -297,13 +297,13 @@ func TestAddEstimateError(t *testing.T) {
 	m := new(MockDatastore)
 	ds = m
 
-	m.On("AddEstimate", "12345", Estimate{WorkPackageID: "TEST01"}).Return(fmt.Errorf("Some error"))
+	m.On("AddEstimate", "12345", Estimate{TaskID: "TEST01"}).Return(fmt.Errorf("Some error"))
 
-	err := ds.AddEstimate("12345", Estimate{WorkPackageID: "TEST01"})
+	err := ds.AddEstimate("12345", Estimate{TaskID: "TEST01"})
 
 	assert.Error(t, err)
 	assert.Equal(t, "Some error", err.Error())
-	m.MethodCalled("AddEstimate", "12345", Estimate{WorkPackageID: "TEST01"})
+	m.MethodCalled("AddEstimate", "12345", Estimate{TaskID: "TEST01"})
 }
 
 func TestRemoveEstimateNoError(t *testing.T) {
@@ -311,12 +311,12 @@ func TestRemoveEstimateNoError(t *testing.T) {
 	m := new(MockDatastore)
 	ds = m
 
-	m.On("RemoveEstimate", "12345", Estimate{WorkPackageID: "TEST01"}).Return(nil)
+	m.On("RemoveEstimate", "12345", Estimate{TaskID: "TEST01"}).Return(nil)
 
-	err := ds.RemoveEstimate("12345", Estimate{WorkPackageID: "TEST01"})
+	err := ds.RemoveEstimate("12345", Estimate{TaskID: "TEST01"})
 
 	assert.NoError(t, err)
-	m.MethodCalled("RemoveEstimate", "12345", Estimate{WorkPackageID: "TEST01"})
+	m.MethodCalled("RemoveEstimate", "12345", Estimate{TaskID: "TEST01"})
 }
 
 func TestRemoveEstimateError(t *testing.T) {
@@ -324,13 +324,13 @@ func TestRemoveEstimateError(t *testing.T) {
 	m := new(MockDatastore)
 	ds = m
 
-	m.On("RemoveEstimate", "12345", Estimate{WorkPackageID: "TEST01"}).Return(fmt.Errorf("Some error"))
+	m.On("RemoveEstimate", "12345", Estimate{TaskID: "TEST01"}).Return(fmt.Errorf("Some error"))
 
-	err := ds.RemoveEstimate("12345", Estimate{WorkPackageID: "TEST01"})
+	err := ds.RemoveEstimate("12345", Estimate{TaskID: "TEST01"})
 
 	assert.Error(t, err)
 	assert.Equal(t, "Some error", err.Error())
-	m.MethodCalled("RemoveEstimate", "12345", Estimate{WorkPackageID: "TEST01"})
+	m.MethodCalled("RemoveEstimate", "12345", Estimate{TaskID: "TEST01"})
 }
 
 func TestGetEstimatesNoError(t *testing.T) {
@@ -338,12 +338,12 @@ func TestGetEstimatesNoError(t *testing.T) {
 	m := new(MockDatastore)
 	ds = m
 
-	m.On("GetEstimates", "12345").Return([]Estimate{Estimate{WorkPackageID: "TEST01"}}, nil)
+	m.On("GetEstimates", "12345").Return([]Estimate{Estimate{TaskID: "TEST01"}}, nil)
 
 	res, err := ds.GetEstimates("12345")
 
 	assert.NoError(t, err)
-	assert.Equal(t, "TEST01", res[0].WorkPackageID)
+	assert.Equal(t, "TEST01", res[0].TaskID)
 	m.MethodCalled("GetEstimates", "12345")
 }
 

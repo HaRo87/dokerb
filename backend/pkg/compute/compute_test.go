@@ -10,13 +10,13 @@ import (
 const float64CompareThreshold = 0.001
 
 func TestExtractEstimatesFailsDueToEmptyID(t *testing.T) {
-	_, err := ExtractEstimatesForWorkPackage([]datastore.Estimate{}, "")
+	_, err := ExtractEstimatesForTask([]datastore.Estimate{}, "")
 	assert.Error(t, err)
-	assert.Equal(t, "Work Package ID cannot be empty", err.Error())
+	assert.Equal(t, "Task ID cannot be empty", err.Error())
 }
 
 func TestExtractEstimatesFailsDueToEmptyEstimateList(t *testing.T) {
-	_, err := ExtractEstimatesForWorkPackage([]datastore.Estimate{}, "TEST01")
+	_, err := ExtractEstimatesForTask([]datastore.Estimate{}, "TEST01")
 	assert.Error(t, err)
 	assert.Equal(t, "Not enough data to process", err.Error())
 }
@@ -24,38 +24,38 @@ func TestExtractEstimatesFailsDueToEmptyEstimateList(t *testing.T) {
 func TestExtractEstimatesFailsDueToEstimateForIDNotInList(t *testing.T) {
 	ests := []datastore.Estimate{
 		{
-			WorkPackageID: "TEST01",
+			TaskID: "TEST01",
 		},
 		{
-			WorkPackageID: "TEST02",
+			TaskID: "TEST02",
 		},
 	}
 
-	_, err := ExtractEstimatesForWorkPackage(ests, "TEST03")
+	_, err := ExtractEstimatesForTask(ests, "TEST03")
 	assert.Error(t, err)
-	assert.Equal(t, "Specified work package with ID: TEST03 is not part of estimates", err.Error())
+	assert.Equal(t, "Specified task with ID: TEST03 is not part of estimates", err.Error())
 }
 
 func TestExtractEstimatesSuccess(t *testing.T) {
 	ests := []datastore.Estimate{
 		{
-			WorkPackageID: "TEST01",
-			UserName:      "Tigger",
+			TaskID:   "TEST01",
+			UserName: "Tigger",
 		},
 		{
-			WorkPackageID: "TEST02",
-			UserName:      "Tigger",
+			TaskID:   "TEST02",
+			UserName: "Tigger",
 		},
 		{
-			WorkPackageID: "TEST01",
-			UserName:      "Rabbit",
+			TaskID:   "TEST01",
+			UserName: "Rabbit",
 		},
 	}
 
-	res, err := ExtractEstimatesForWorkPackage(ests, "TEST01")
+	res, err := ExtractEstimatesForTask(ests, "TEST01")
 	assert.NoError(t, err)
-	assert.Equal(t, "TEST01", res[0].WorkPackageID)
-	assert.Equal(t, "TEST01", res[1].WorkPackageID)
+	assert.Equal(t, "TEST01", res[0].TaskID)
+	assert.Equal(t, "TEST01", res[1].TaskID)
 	assert.Equal(t, "Tigger", res[0].UserName)
 	assert.Equal(t, "Rabbit", res[1].UserName)
 }
@@ -63,24 +63,24 @@ func TestExtractEstimatesSuccess(t *testing.T) {
 func TestCalculateAverageEstimateFailsDueToEmptyID(t *testing.T) {
 	_, err := CalculateAverageEstimate([]datastore.Estimate{}, "")
 	assert.Error(t, err)
-	assert.Equal(t, "Work Package ID cannot be empty", err.Error())
+	assert.Equal(t, "Task ID cannot be empty", err.Error())
 }
 
 func TestCalculateAverageSuccess(t *testing.T) {
 	ests := []datastore.Estimate{
 		{
-			WorkPackageID:  "TEST01",
+			TaskID:         "TEST01",
 			UserName:       "Tigger",
 			BestCase:       1.0,
 			MostLikelyCase: 2.0,
 			WorstCase:      4.0,
 		},
 		{
-			WorkPackageID: "TEST02",
-			UserName:      "Tigger",
+			TaskID:   "TEST02",
+			UserName: "Tigger",
 		},
 		{
-			WorkPackageID:  "TEST01",
+			TaskID:         "TEST01",
 			UserName:       "Rabbit",
 			BestCase:       2.0,
 			MostLikelyCase: 3.0,
@@ -97,13 +97,13 @@ func TestCalculateAverageSuccess(t *testing.T) {
 func TestGetUsersWithMaxDistanceBetweenEffortFailsDueToEmptyID(t *testing.T) {
 	_, err := GetUsersWithMaxDistanceBetweenEffort([]datastore.Estimate{}, "")
 	assert.Error(t, err)
-	assert.Equal(t, "Work Package ID cannot be empty", err.Error())
+	assert.Equal(t, "Task ID cannot be empty", err.Error())
 }
 
 func TestGetUsersWithMaxDistanceBetweenEffortFailsDueToWrongEffortValues(t *testing.T) {
 	ests := []datastore.Estimate{
 		{
-			WorkPackageID:  "TEST01",
+			TaskID:         "TEST01",
 			UserName:       "Tigger",
 			BestCase:       1.0,
 			MostLikelyCase: 0.2,
@@ -118,25 +118,25 @@ func TestGetUsersWithMaxDistanceBetweenEffortFailsDueToWrongEffortValues(t *test
 func TestGetUsersWithMaxDistanceBetweenEffortSuccess(t *testing.T) {
 	ests := []datastore.Estimate{
 		{
-			WorkPackageID:  "TEST01",
+			TaskID:         "TEST01",
 			UserName:       "Tigger",
 			BestCase:       1.0,
 			MostLikelyCase: 2.0,
 			WorstCase:      4.0,
 		},
 		{
-			WorkPackageID: "TEST02",
-			UserName:      "Tigger",
+			TaskID:   "TEST02",
+			UserName: "Tigger",
 		},
 		{
-			WorkPackageID:  "TEST01",
+			TaskID:         "TEST01",
 			UserName:       "Rabbit",
 			BestCase:       2.0,
 			MostLikelyCase: 3.0,
 			WorstCase:      5.0,
 		},
 		{
-			WorkPackageID:  "TEST01",
+			TaskID:         "TEST01",
 			UserName:       "Piglet",
 			BestCase:       0.4,
 			MostLikelyCase: 1.0,

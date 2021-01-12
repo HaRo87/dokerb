@@ -206,49 +206,49 @@ func TestRemoveUserSuccess(t *testing.T) {
 	assert.NotContains(t, l, "Tigger")
 }
 
-func TestRemoveWorkPackageFromEmptyList(t *testing.T) {
-	l, err := removeWorkpackage([]WorkPackage{}, "TEST01")
-	assert.Equal(t, "Workpackage with ID: TEST01 is not part of session", err.Error())
+func TestRemoveTaskFromEmptyList(t *testing.T) {
+	l, err := removeTask([]Task{}, "TEST01")
+	assert.Equal(t, "Task with ID: TEST01 is not part of session", err.Error())
 	assert.Len(t, l, 0)
 }
 
-func TestRemoveWorkPackageFromListWithoutThatWorkPackageBeingPartOfThatList(t *testing.T) {
-	wps := []WorkPackage{
-		WorkPackage{
+func TestRemoveTaskFromListWithoutThatTaskBeingPartOfThatList(t *testing.T) {
+	wps := []Task{
+		Task{
 			ID: "TEST01",
 		},
-		WorkPackage{
+		Task{
 			ID: "TEST02",
 		},
-		WorkPackage{
+		Task{
 			ID: "TEST03",
 		},
 	}
-	l, err := removeWorkpackage(wps, "TEST04")
-	assert.Equal(t, "Workpackage with ID: TEST04 is not part of session", err.Error())
+	l, err := removeTask(wps, "TEST04")
+	assert.Equal(t, "Task with ID: TEST04 is not part of session", err.Error())
 	assert.Len(t, l, 3)
 }
 
-func TestRemoveWorkPackageSuccess(t *testing.T) {
-	wps := []WorkPackage{
-		WorkPackage{
+func TestRemoveTaskSuccess(t *testing.T) {
+	wps := []Task{
+		Task{
 			ID: "TEST01",
 		},
-		WorkPackage{
+		Task{
 			ID: "TEST02",
 		},
-		WorkPackage{
+		Task{
 			ID: "TEST03",
 		},
 	}
-	l, err := removeWorkpackage(wps, "TEST03")
+	l, err := removeTask(wps, "TEST03")
 	assert.NoError(t, err)
 	assert.Len(t, l, 2)
-	assert.NotContains(t, l, WorkPackage{ID: "TEST03"})
+	assert.NotContains(t, l, Task{ID: "TEST03"})
 }
 
 func TestRemoveEstimateFromEmptyList(t *testing.T) {
-	l, err := removeEstimate([]Estimate{}, Estimate{WorkPackageID: "TEST01", UserName: "Tigger"})
+	l, err := removeEstimate([]Estimate{}, Estimate{TaskID: "TEST01", UserName: "Tigger"})
 	assert.Equal(t, "Estimate with ID: TEST01 and user name: Tigger is not part of session", err.Error())
 	assert.Len(t, l, 0)
 }
@@ -256,19 +256,19 @@ func TestRemoveEstimateFromEmptyList(t *testing.T) {
 func TestRemoveEstimateFromListWithoutThatEstimateBeingPartOfThatListDueToIDAndUserName(t *testing.T) {
 	est := []Estimate{
 		Estimate{
-			WorkPackageID: "TEST01",
-			UserName:      "Tigger",
+			TaskID:   "TEST01",
+			UserName: "Tigger",
 		},
 		Estimate{
-			WorkPackageID: "TEST02",
-			UserName:      "Rabbit",
+			TaskID:   "TEST02",
+			UserName: "Rabbit",
 		},
 		Estimate{
-			WorkPackageID: "TEST03",
-			UserName:      "Piglet",
+			TaskID:   "TEST03",
+			UserName: "Piglet",
 		},
 	}
-	l, err := removeEstimate(est, Estimate{WorkPackageID: "TEST04", UserName: "Tigger"})
+	l, err := removeEstimate(est, Estimate{TaskID: "TEST04", UserName: "Tigger"})
 	assert.Equal(t, "Estimate with ID: TEST04 and user name: Tigger is not part of session", err.Error())
 	assert.Len(t, l, 3)
 }
@@ -276,19 +276,19 @@ func TestRemoveEstimateFromListWithoutThatEstimateBeingPartOfThatListDueToIDAndU
 func TestRemoveEstimateFromListWithoutThatEstimateBeingPartOfThatListDueToUserName(t *testing.T) {
 	est := []Estimate{
 		Estimate{
-			WorkPackageID: "TEST01",
-			UserName:      "Tigger",
+			TaskID:   "TEST01",
+			UserName: "Tigger",
 		},
 		Estimate{
-			WorkPackageID: "TEST02",
-			UserName:      "Rabbit",
+			TaskID:   "TEST02",
+			UserName: "Rabbit",
 		},
 		Estimate{
-			WorkPackageID: "TEST03",
-			UserName:      "Piglet",
+			TaskID:   "TEST03",
+			UserName: "Piglet",
 		},
 	}
-	l, err := removeEstimate(est, Estimate{WorkPackageID: "TEST01", UserName: "Piglet"})
+	l, err := removeEstimate(est, Estimate{TaskID: "TEST01", UserName: "Piglet"})
 	assert.Equal(t, "Estimate with ID: TEST01 and user name: Piglet is not part of session", err.Error())
 	assert.Len(t, l, 3)
 }
@@ -296,22 +296,22 @@ func TestRemoveEstimateFromListWithoutThatEstimateBeingPartOfThatListDueToUserNa
 func TestRemoveEstimateSuccess(t *testing.T) {
 	est := []Estimate{
 		Estimate{
-			WorkPackageID: "TEST01",
-			UserName:      "Tigger",
+			TaskID:   "TEST01",
+			UserName: "Tigger",
 		},
 		Estimate{
-			WorkPackageID: "TEST02",
-			UserName:      "Rabbit",
+			TaskID:   "TEST02",
+			UserName: "Rabbit",
 		},
 		Estimate{
-			WorkPackageID: "TEST03",
-			UserName:      "Piglet",
+			TaskID:   "TEST03",
+			UserName: "Piglet",
 		},
 	}
-	l, err := removeEstimate(est, Estimate{WorkPackageID: "TEST01", UserName: "Tigger"})
+	l, err := removeEstimate(est, Estimate{TaskID: "TEST01", UserName: "Tigger"})
 	assert.NoError(t, err)
 	assert.Len(t, l, 2)
-	assert.NotContains(t, l, Estimate{WorkPackageID: "TEST01", UserName: "Tigger"})
+	assert.NotContains(t, l, Estimate{TaskID: "TEST01", UserName: "Tigger"})
 }
 
 func TestLeaveSessionFailsDueToEmptyName(t *testing.T) {
@@ -392,131 +392,131 @@ func TestRemoveSessionSuccessWithRealDB(t *testing.T) {
 	assert.NoError(t, err3)
 }
 
-func TestAddWorkPackageToSessionFailsDueToEmptyID(t *testing.T) {
+func TestAddTaskToSessionFailsDueToEmptyID(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 	m.On("Exec", "CREATE TABLE sessions").Return(nil)
 	gds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
-	err2 := gds.AddWorkPackage("12345678901234567890123456789012", "", "eat honey")
+	err2 := gds.AddTask("12345678901234567890123456789012", "", "eat honey")
 	assert.Equal(t, "ID should not be empty", err2.Error())
 }
 
-func TestAddWorkPackageToSessionFailsDueToWrongTokenLength(t *testing.T) {
+func TestAddTaskToSessionFailsDueToWrongTokenLength(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 	m.On("Exec", "CREATE TABLE sessions").Return(nil)
 	gds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
-	err2 := gds.AddWorkPackage("1234567890123456789012345678901212", "01", "eat honey")
+	err2 := gds.AddTask("1234567890123456789012345678901212", "01", "eat honey")
 	assert.Equal(t, "Session token does not match desired length", err2.Error())
 }
 
-func TestAddWorkPackageToSessionFailsDueToNonExistingSessionWithRealDB(t *testing.T) {
+func TestAddTaskToSessionFailsDueToNonExistingSessionWithRealDB(t *testing.T) {
 	setupAndTearDown := setupTestCaseForRealDB(t)
 	defer setupAndTearDown(t)
 	gds, err := NewGenjiDatastore(db)
 	assert.NoError(t, err)
 	_, err2 := gds.CreateSession()
 	assert.NoError(t, err2)
-	err3 := gds.AddWorkPackage("12345678901234567890123456789012", "01", "eat honey")
+	err3 := gds.AddTask("12345678901234567890123456789012", "01", "eat honey")
 	assert.Equal(t, "Specified session does not exist", err3.Error())
 }
 
-func TestAddWorkPackageToSessionSuccessWithRealDB(t *testing.T) {
+func TestAddTaskToSessionSuccessWithRealDB(t *testing.T) {
 	setupAndTearDown := setupTestCaseForRealDB(t)
 	defer setupAndTearDown(t)
 	gds, err := NewGenjiDatastore(db)
 	assert.NoError(t, err)
 	token, err2 := gds.CreateSession()
 	assert.NoError(t, err2)
-	err3 := gds.AddWorkPackage(token, "01", "eat honey")
+	err3 := gds.AddTask(token, "01", "eat honey")
 	assert.NoError(t, err3)
 }
 
-func TestAddWorkPackageToSessionErrorWhileTryingToAddWorkPackageTwiceWithRealDB(t *testing.T) {
+func TestAddTaskToSessionErrorWhileTryingToAddTaskTwiceWithRealDB(t *testing.T) {
 	setupAndTearDown := setupTestCaseForRealDB(t)
 	defer setupAndTearDown(t)
 	gds, err := NewGenjiDatastore(db)
 	assert.NoError(t, err)
 	token, err2 := gds.CreateSession()
 	assert.NoError(t, err2)
-	err3 := gds.AddWorkPackage(token, "01", "eat honey")
+	err3 := gds.AddTask(token, "01", "eat honey")
 	assert.NoError(t, err3)
-	err4 := gds.AddWorkPackage(token, "01", "eat honey")
-	assert.Equal(t, "Workpackage with ID: 01 already part of session", err4.Error())
+	err4 := gds.AddTask(token, "01", "eat honey")
+	assert.Equal(t, "Task with ID: 01 already part of session", err4.Error())
 }
 
-func TestRemoveWorkPackageFromSessionFailsDueToEmptyID(t *testing.T) {
+func TestRemoveTaskFromSessionFailsDueToEmptyID(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 	m.On("Exec", "CREATE TABLE sessions").Return(nil)
 	gds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
-	err2 := gds.RemoveWorkPackage("12345678901234567890123456789012", "")
+	err2 := gds.RemoveTask("12345678901234567890123456789012", "")
 	assert.Equal(t, "ID should not be empty", err2.Error())
 }
 
-func TestRemoveWorkPackageFromSessionFailsDueToWrongTokenLength(t *testing.T) {
+func TestRemoveTaskFromSessionFailsDueToWrongTokenLength(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 	m.On("Exec", "CREATE TABLE sessions").Return(nil)
 	gds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
-	err2 := gds.RemoveWorkPackage("1234567890123456789012345678901212", "01")
+	err2 := gds.RemoveTask("1234567890123456789012345678901212", "01")
 	assert.Equal(t, "Session token does not match desired length", err2.Error())
 }
 
-func TestRemoveWorkPackageFromSessionFailsDueToNonExistingSessionWithRealDB(t *testing.T) {
+func TestRemoveTaskFromSessionFailsDueToNonExistingSessionWithRealDB(t *testing.T) {
 	setupAndTearDown := setupTestCaseForRealDB(t)
 	defer setupAndTearDown(t)
 	gds, err := NewGenjiDatastore(db)
 	assert.NoError(t, err)
 	_, err2 := gds.CreateSession()
 	assert.NoError(t, err2)
-	err3 := gds.RemoveWorkPackage("12345678901234567890123456789012", "01")
+	err3 := gds.RemoveTask("12345678901234567890123456789012", "01")
 	assert.Equal(t, "Specified session does not exist", err3.Error())
 }
 
-func TestRemoveWorkPackageFromSessionFailsDueToNonExistingIDWithRealDB(t *testing.T) {
+func TestRemoveTaskFromSessionFailsDueToNonExistingIDWithRealDB(t *testing.T) {
 	setupAndTearDown := setupTestCaseForRealDB(t)
 	defer setupAndTearDown(t)
 	gds, err := NewGenjiDatastore(db)
 	assert.NoError(t, err)
 	token, err2 := gds.CreateSession()
 	assert.NoError(t, err2)
-	err3 := gds.RemoveWorkPackage(token, "01")
-	assert.Equal(t, "Unable to remove workpackage: 01 from session", err3.Error())
+	err3 := gds.RemoveTask(token, "01")
+	assert.Equal(t, "Unable to remove Task: 01 from session", err3.Error())
 }
 
-func TestRemoveWorkPackageFromSessionSuccessWithRealDB(t *testing.T) {
+func TestRemoveTaskFromSessionSuccessWithRealDB(t *testing.T) {
 	setupAndTearDown := setupTestCaseForRealDB(t)
 	defer setupAndTearDown(t)
 	gds, err := NewGenjiDatastore(db)
 	assert.NoError(t, err)
 	token, err2 := gds.CreateSession()
 	assert.NoError(t, err2)
-	err3 := gds.AddWorkPackage(token, "01", "eat honey")
+	err3 := gds.AddTask(token, "01", "eat honey")
 	assert.NoError(t, err3)
-	err4 := gds.RemoveWorkPackage(token, "01")
+	err4 := gds.RemoveTask(token, "01")
 	assert.NoError(t, err4)
 }
 
-func TestRemoveWorkPackageFromSessionErrorWhileTryingToRemoveWorkPackageTwiceWithRealDB(t *testing.T) {
+func TestRemoveTaskFromSessionErrorWhileTryingToRemoveTaskTwiceWithRealDB(t *testing.T) {
 	setupAndTearDown := setupTestCaseForRealDB(t)
 	defer setupAndTearDown(t)
 	gds, err := NewGenjiDatastore(db)
 	assert.NoError(t, err)
 	token, err2 := gds.CreateSession()
 	assert.NoError(t, err2)
-	err3 := gds.AddWorkPackage(token, "01", "eat honey")
+	err3 := gds.AddTask(token, "01", "eat honey")
 	assert.NoError(t, err3)
-	err4 := gds.AddWorkPackage(token, "02", "harvest honey")
+	err4 := gds.AddTask(token, "02", "harvest honey")
 	assert.NoError(t, err4)
-	err5 := gds.RemoveWorkPackage(token, "01")
+	err5 := gds.RemoveTask(token, "01")
 	assert.NoError(t, err5)
-	err6 := gds.RemoveWorkPackage(token, "01")
-	assert.Equal(t, "Unable to remove workpackage: 01 from session", err6.Error())
+	err6 := gds.RemoveTask(token, "01")
+	assert.Equal(t, "Unable to remove Task: 01 from session", err6.Error())
 }
 
 func TestGetUsersFromSessionFailsDueToWrongTokenLength(t *testing.T) {
@@ -554,190 +554,190 @@ func TestGetUsersFromSessionSuccessWithRealDB(t *testing.T) {
 	assert.Equal(t, []string{"Tigger"}, users)
 }
 
-func TestGetWorkPackagesFromSessionFailsDueToWrongTokenLength(t *testing.T) {
+func TestGetTasksFromSessionFailsDueToWrongTokenLength(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 	m.On("Exec", "CREATE TABLE sessions").Return(nil)
 	gds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
-	_, err2 := gds.GetWorkPackages("1234567890123456789012345678901212")
+	_, err2 := gds.GetTasks("1234567890123456789012345678901212")
 	assert.Equal(t, "Session token does not match desired length", err2.Error())
 }
 
-func TestGetWorkPackagesFromSessionFailsDueToNonExistingSessionWithRealDB(t *testing.T) {
+func TestGetTasksFromSessionFailsDueToNonExistingSessionWithRealDB(t *testing.T) {
 	setupAndTearDown := setupTestCaseForRealDB(t)
 	defer setupAndTearDown(t)
 	gds, err := NewGenjiDatastore(db)
 	assert.NoError(t, err)
 	_, err2 := gds.CreateSession()
 	assert.NoError(t, err2)
-	_, err3 := gds.GetWorkPackages("12345678901234567890123456789012")
+	_, err3 := gds.GetTasks("12345678901234567890123456789012")
 	assert.Equal(t, "Specified session does not exist", err3.Error())
 }
 
-func TestGetWorkPackagesFromSessionSuccessWithRealDB(t *testing.T) {
+func TestGetTasksFromSessionSuccessWithRealDB(t *testing.T) {
 	setupAndTearDown := setupTestCaseForRealDB(t)
 	defer setupAndTearDown(t)
 	gds, err := NewGenjiDatastore(db)
 	assert.NoError(t, err)
 	token, err2 := gds.CreateSession()
 	assert.NoError(t, err2)
-	err3 := gds.AddWorkPackage(token, "01", "eat honey")
+	err3 := gds.AddTask(token, "01", "eat honey")
 	assert.NoError(t, err3)
-	wps, err4 := gds.GetWorkPackages(token)
+	wps, err4 := gds.GetTasks(token)
 	assert.NoError(t, err4)
 	assert.Equal(t, "01", wps[0].ID)
 	assert.Equal(t, "eat honey", wps[0].Summary)
 }
 
-func TestAddEstimateToWorkPackageFailsDueToEmptyID(t *testing.T) {
+func TestAddEstimateToTaskFailsDueToEmptyID(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 	m.On("Exec", "CREATE TABLE sessions").Return(nil)
 	gds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
-	err2 := gds.AddEstimateToWorkPackage("12345678901234567890123456789012", "", 0.0, 0.0)
+	err2 := gds.AddEstimateToTask("12345678901234567890123456789012", "", 0.0, 0.0)
 	assert.Equal(t, "ID should not be empty", err2.Error())
 }
 
-func TestAddEstimateToWorkPackageFailsDueToWrongTokenLength(t *testing.T) {
+func TestAddEstimateToTaskFailsDueToWrongTokenLength(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 	m.On("Exec", "CREATE TABLE sessions").Return(nil)
 	gds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
-	err2 := gds.AddEstimateToWorkPackage("1234567890123456789012345678901212", "01", 0.0, 0.0)
+	err2 := gds.AddEstimateToTask("1234567890123456789012345678901212", "01", 0.0, 0.0)
 	assert.Equal(t, "Session token does not match desired length", err2.Error())
 }
 
-func TestAddEstimateToWorkPackageFailsDueToIncorrectEffort(t *testing.T) {
+func TestAddEstimateToTaskFailsDueToIncorrectEffort(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 	m.On("Exec", "CREATE TABLE sessions").Return(nil)
 	gds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
-	err2 := gds.AddEstimateToWorkPackage("12345678901234567890123456789012", "01", -0.1, 0.0)
+	err2 := gds.AddEstimateToTask("12345678901234567890123456789012", "01", -0.1, 0.0)
 	assert.Equal(t, "Effort < 0 not allowed", err2.Error())
 }
 
-func TestAddEstimateToWorkPackageFailsDueToIncorrectStandardDeviation(t *testing.T) {
+func TestAddEstimateToTaskFailsDueToIncorrectStandardDeviation(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 	m.On("Exec", "CREATE TABLE sessions").Return(nil)
 	gds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
-	err2 := gds.AddEstimateToWorkPackage("12345678901234567890123456789012", "01", 0.1, -0.1)
+	err2 := gds.AddEstimateToTask("12345678901234567890123456789012", "01", 0.1, -0.1)
 	assert.Equal(t, "Standard deviation < 0 not allowed", err2.Error())
 }
 
-func TestAddEstimateToWorkPackageFailsDueToNonExistingSessionWithRealDB(t *testing.T) {
+func TestAddEstimateToTaskFailsDueToNonExistingSessionWithRealDB(t *testing.T) {
 	setupAndTearDown := setupTestCaseForRealDB(t)
 	defer setupAndTearDown(t)
 	gds, err := NewGenjiDatastore(db)
 	assert.NoError(t, err)
 	_, err2 := gds.CreateSession()
 	assert.NoError(t, err2)
-	err3 := gds.AddEstimateToWorkPackage("12345678901234567890123456789012", "01", 0.0, 0.0)
+	err3 := gds.AddEstimateToTask("12345678901234567890123456789012", "01", 0.0, 0.0)
 	assert.Equal(t, "Specified session does not exist", err3.Error())
 }
 
-func TestAddEstimateToWorkPackageErrorWhileTryingToAddEstimateToNonExistingWorkPackageWithRealDB(t *testing.T) {
+func TestAddEstimateToTaskErrorWhileTryingToAddEstimateToNonExistingTaskWithRealDB(t *testing.T) {
 	setupAndTearDown := setupTestCaseForRealDB(t)
 	defer setupAndTearDown(t)
 	gds, err := NewGenjiDatastore(db)
 	assert.NoError(t, err)
 	token, err2 := gds.CreateSession()
 	assert.NoError(t, err2)
-	err3 := gds.AddEstimateToWorkPackage(token, "01", 1.5, 0.2)
-	assert.Equal(t, "Work package with ID: 01 does not exist", err3.Error())
+	err3 := gds.AddEstimateToTask(token, "01", 1.5, 0.2)
+	assert.Equal(t, "Task with ID: 01 does not exist", err3.Error())
 }
 
-func TestAddEstimateToWorkPackageSuccessWithRealDB(t *testing.T) {
+func TestAddEstimateToTaskSuccessWithRealDB(t *testing.T) {
 	setupAndTearDown := setupTestCaseForRealDB(t)
 	defer setupAndTearDown(t)
 	gds, err := NewGenjiDatastore(db)
 	assert.NoError(t, err)
 	token, err2 := gds.CreateSession()
 	assert.NoError(t, err2)
-	err3 := gds.AddWorkPackage(token, "01", "eat honey")
+	err3 := gds.AddTask(token, "01", "eat honey")
 	assert.NoError(t, err3)
-	err4 := gds.AddEstimateToWorkPackage(token, "01", 1.5, 0.2)
+	err4 := gds.AddEstimateToTask(token, "01", 1.5, 0.2)
 	assert.NoError(t, err4)
 }
 
-func TestRemoveEstimateFromWorkPackageFailsDueToEmptyID(t *testing.T) {
+func TestRemoveEstimateFromTaskFailsDueToEmptyID(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 	m.On("Exec", "CREATE TABLE sessions").Return(nil)
 	gds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
-	err2 := gds.RemoveEstimateFromWorkPackage("12345678901234567890123456789012", "")
+	err2 := gds.RemoveEstimateFromTask("12345678901234567890123456789012", "")
 	assert.Equal(t, "ID should not be empty", err2.Error())
 }
 
-func TestRemoveEstimateFromWorkPackageFailsDueToWrongTokenLength(t *testing.T) {
+func TestRemoveEstimateFromTaskFailsDueToWrongTokenLength(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 	m.On("Exec", "CREATE TABLE sessions").Return(nil)
 	gds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
-	err2 := gds.RemoveEstimateFromWorkPackage("1234567890123456789012345678901212", "01")
+	err2 := gds.RemoveEstimateFromTask("1234567890123456789012345678901212", "01")
 	assert.Equal(t, "Session token does not match desired length", err2.Error())
 }
 
-func TestRemoveEstimateFromWorkPackageFailsDueToNonExistingSessionWithRealDB(t *testing.T) {
+func TestRemoveEstimateFromTaskFailsDueToNonExistingSessionWithRealDB(t *testing.T) {
 	setupAndTearDown := setupTestCaseForRealDB(t)
 	defer setupAndTearDown(t)
 	gds, err := NewGenjiDatastore(db)
 	assert.NoError(t, err)
 	_, err2 := gds.CreateSession()
 	assert.NoError(t, err2)
-	err3 := gds.RemoveEstimateFromWorkPackage("12345678901234567890123456789012", "01")
+	err3 := gds.RemoveEstimateFromTask("12345678901234567890123456789012", "01")
 	assert.Equal(t, "Specified session does not exist", err3.Error())
 }
 
-func TestRemoveEstimateFromWorkPackageErrorWhileTryingToRemoveEstimateFromNonExistingWorkPackageWithRealDB(t *testing.T) {
+func TestRemoveEstimateFromTaskErrorWhileTryingToRemoveEstimateFromNonExistingTaskWithRealDB(t *testing.T) {
 	setupAndTearDown := setupTestCaseForRealDB(t)
 	defer setupAndTearDown(t)
 	gds, err := NewGenjiDatastore(db)
 	assert.NoError(t, err)
 	token, err2 := gds.CreateSession()
 	assert.NoError(t, err2)
-	err3 := gds.RemoveEstimateFromWorkPackage(token, "01")
-	assert.Equal(t, "Work package with ID: 01 does not exist", err3.Error())
+	err3 := gds.RemoveEstimateFromTask(token, "01")
+	assert.Equal(t, "Task with ID: 01 does not exist", err3.Error())
 }
 
-func TestRemoveEstimateFromWorkPackageSuccessWithRealDB(t *testing.T) {
+func TestRemoveEstimateFromTaskSuccessWithRealDB(t *testing.T) {
 	setupAndTearDown := setupTestCaseForRealDB(t)
 	defer setupAndTearDown(t)
 	gds, err := NewGenjiDatastore(db)
 	assert.NoError(t, err)
 	token, err2 := gds.CreateSession()
 	assert.NoError(t, err2)
-	err3 := gds.AddWorkPackage(token, "01", "eat honey")
+	err3 := gds.AddTask(token, "01", "eat honey")
 	assert.NoError(t, err3)
-	err4 := gds.AddEstimateToWorkPackage(token, "01", 1.5, 0.2)
+	err4 := gds.AddEstimateToTask(token, "01", 1.5, 0.2)
 	assert.NoError(t, err4)
-	wps, err5 := gds.GetWorkPackages(token)
+	wps, err5 := gds.GetTasks(token)
 	assert.NoError(t, err5)
 	assert.Equal(t, 1.5, wps[0].Effort)
 	assert.Equal(t, 0.2, wps[0].StandardDeviation)
-	err6 := gds.RemoveEstimateFromWorkPackage(token, "01")
+	err6 := gds.RemoveEstimateFromTask(token, "01")
 	assert.NoError(t, err6)
-	wps2, err7 := gds.GetWorkPackages(token)
+	wps2, err7 := gds.GetTasks(token)
 	assert.NoError(t, err7)
 	assert.Equal(t, 0.0, wps2[0].Effort)
 	assert.Equal(t, 0.0, wps2[0].StandardDeviation)
 }
 
-func TestAddEstimateToSessionFailsDueToEmptyWorkPackageID(t *testing.T) {
+func TestAddEstimateToSessionFailsDueToEmptyTaskID(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 	m.On("Exec", "CREATE TABLE sessions").Return(nil)
 	gds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
-	err2 := gds.AddEstimate("12345678901234567890123456789012", Estimate{WorkPackageID: "", UserName: "Tigger"})
-	assert.Equal(t, "Work Package ID should not be empty", err2.Error())
+	err2 := gds.AddEstimate("12345678901234567890123456789012", Estimate{TaskID: "", UserName: "Tigger"})
+	assert.Equal(t, "Task ID should not be empty", err2.Error())
 }
 
 func TestAddEstimateToSessionFailsDueToEmptyUserName(t *testing.T) {
@@ -746,7 +746,7 @@ func TestAddEstimateToSessionFailsDueToEmptyUserName(t *testing.T) {
 	m.On("Exec", "CREATE TABLE sessions").Return(nil)
 	gds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
-	err2 := gds.AddEstimate("12345678901234567890123456789012", Estimate{WorkPackageID: "TEST01", UserName: ""})
+	err2 := gds.AddEstimate("12345678901234567890123456789012", Estimate{TaskID: "TEST01", UserName: ""})
 	assert.Equal(t, "User name should not be empty", err2.Error())
 }
 
@@ -756,7 +756,7 @@ func TestAddEstimateToSessionFailsDueToWrongTokenLength(t *testing.T) {
 	m.On("Exec", "CREATE TABLE sessions").Return(nil)
 	gds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
-	err2 := gds.AddEstimate("1234567890123456789012345678901212", Estimate{WorkPackageID: "TEST01", UserName: "Tigger"})
+	err2 := gds.AddEstimate("1234567890123456789012345678901212", Estimate{TaskID: "TEST01", UserName: "Tigger"})
 	assert.Equal(t, "Session token does not match desired length", err2.Error())
 }
 
@@ -766,7 +766,7 @@ func TestAddEstimateToSessionFailsDueToWrongValueForBestCase(t *testing.T) {
 	m.On("Exec", "CREATE TABLE sessions").Return(nil)
 	gds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
-	err2 := gds.AddEstimate("12345678901234567890123456789012", Estimate{WorkPackageID: "TEST01", UserName: "Tigger", BestCase: -0.1})
+	err2 := gds.AddEstimate("12345678901234567890123456789012", Estimate{TaskID: "TEST01", UserName: "Tigger", BestCase: -0.1})
 	assert.Equal(t, "Best case must be >= 0, provided: -0.1", err2.Error())
 }
 
@@ -777,7 +777,7 @@ func TestAddEstimateToSessionFailsDueToNonExistingSessionWithRealDB(t *testing.T
 	assert.NoError(t, err)
 	_, err2 := gds.CreateSession()
 	assert.NoError(t, err2)
-	err3 := gds.AddEstimate("12345678901234567890123456789012", Estimate{WorkPackageID: "TEST01", UserName: "Tigger", BestCase: 0.1, MostLikelyCase: 0.5, WorstCase: 1.0})
+	err3 := gds.AddEstimate("12345678901234567890123456789012", Estimate{TaskID: "TEST01", UserName: "Tigger", BestCase: 0.1, MostLikelyCase: 0.5, WorstCase: 1.0})
 	assert.Equal(t, "Specified session does not exist", err3.Error())
 }
 
@@ -790,11 +790,11 @@ func TestAddEstimateToSessionFailsDueToEstimateAlreadyExistingWithRealDB(t *test
 	assert.NoError(t, err2)
 	err3 := gds.JoinSession(token, "Tigger")
 	assert.NoError(t, err3)
-	err4 := gds.AddWorkPackage(token, "TEST01", "")
+	err4 := gds.AddTask(token, "TEST01", "")
 	assert.NoError(t, err4)
-	err5 := gds.AddEstimate(token, Estimate{WorkPackageID: "TEST01", UserName: "Tigger", BestCase: 0.1, MostLikelyCase: 0.5, WorstCase: 1.0})
+	err5 := gds.AddEstimate(token, Estimate{TaskID: "TEST01", UserName: "Tigger", BestCase: 0.1, MostLikelyCase: 0.5, WorstCase: 1.0})
 	assert.NoError(t, err5)
-	err6 := gds.AddEstimate(token, Estimate{WorkPackageID: "TEST01", UserName: "Tigger", BestCase: 0.1, MostLikelyCase: 0.5, WorstCase: 1.0})
+	err6 := gds.AddEstimate(token, Estimate{TaskID: "TEST01", UserName: "Tigger", BestCase: 0.1, MostLikelyCase: 0.5, WorstCase: 1.0})
 	assert.Equal(t, "Specified estimate already exists", err6.Error())
 }
 
@@ -805,13 +805,13 @@ func TestAddEstimateToSessionFailsDueToUserNotPartOfSessionWithRealDB(t *testing
 	assert.NoError(t, err)
 	token, err2 := gds.CreateSession()
 	assert.NoError(t, err2)
-	err3 := gds.AddWorkPackage(token, "TEST01", "")
+	err3 := gds.AddTask(token, "TEST01", "")
 	assert.NoError(t, err3)
-	err4 := gds.AddEstimate(token, Estimate{WorkPackageID: "TEST01", UserName: "Tigger", BestCase: 0.1, MostLikelyCase: 0.5, WorstCase: 1.0})
+	err4 := gds.AddEstimate(token, Estimate{TaskID: "TEST01", UserName: "Tigger", BestCase: 0.1, MostLikelyCase: 0.5, WorstCase: 1.0})
 	assert.Equal(t, "User: Tigger is not part of session", err4.Error())
 }
 
-func TestAddEstimateToSessionFailsDueToWorkPackageNotPartOfSessionWithRealDB(t *testing.T) {
+func TestAddEstimateToSessionFailsDueToTaskNotPartOfSessionWithRealDB(t *testing.T) {
 	setupAndTearDown := setupTestCaseForRealDB(t)
 	defer setupAndTearDown(t)
 	gds, err := NewGenjiDatastore(db)
@@ -820,8 +820,8 @@ func TestAddEstimateToSessionFailsDueToWorkPackageNotPartOfSessionWithRealDB(t *
 	assert.NoError(t, err2)
 	err3 := gds.JoinSession(token, "Tigger")
 	assert.NoError(t, err3)
-	err4 := gds.AddEstimate(token, Estimate{WorkPackageID: "TEST01", UserName: "Tigger", BestCase: 0.1, MostLikelyCase: 0.5, WorstCase: 1.0})
-	assert.Equal(t, "Work Package with ID: TEST01 is not part of session", err4.Error())
+	err4 := gds.AddEstimate(token, Estimate{TaskID: "TEST01", UserName: "Tigger", BestCase: 0.1, MostLikelyCase: 0.5, WorstCase: 1.0})
+	assert.Equal(t, "Task with ID: TEST01 is not part of session", err4.Error())
 }
 
 func TestGetEstimatesFromSessionFailsDueToWrongTokenLength(t *testing.T) {
@@ -856,23 +856,23 @@ func TestAddEstimateToSessionAndGetEstimatesSuccessWithRealDB(t *testing.T) {
 	assert.NoError(t, err3)
 	err4 := gds.JoinSession(token, "Rabbit")
 	assert.NoError(t, err4)
-	err5 := gds.AddWorkPackage(token, "TEST01", "")
+	err5 := gds.AddTask(token, "TEST01", "")
 	assert.NoError(t, err5)
-	err6 := gds.AddWorkPackage(token, "TEST02", "eat honey")
+	err6 := gds.AddTask(token, "TEST02", "eat honey")
 	assert.NoError(t, err6)
-	err7 := gds.AddEstimate(token, Estimate{WorkPackageID: "TEST01", UserName: "Tigger", BestCase: 0.1, MostLikelyCase: 0.5, WorstCase: 1.0})
+	err7 := gds.AddEstimate(token, Estimate{TaskID: "TEST01", UserName: "Tigger", BestCase: 0.1, MostLikelyCase: 0.5, WorstCase: 1.0})
 	assert.NoError(t, err7)
-	err8 := gds.AddEstimate(token, Estimate{WorkPackageID: "TEST01", UserName: "Rabbit", BestCase: 0.5, MostLikelyCase: 1.5, WorstCase: 2.5})
+	err8 := gds.AddEstimate(token, Estimate{TaskID: "TEST01", UserName: "Rabbit", BestCase: 0.5, MostLikelyCase: 1.5, WorstCase: 2.5})
 	assert.NoError(t, err8)
 	ests, err9 := gds.GetEstimates(token)
 	assert.NoError(t, err9)
 	assert.Equal(t, "Tigger", ests[0].UserName)
-	assert.Equal(t, "TEST01", ests[0].WorkPackageID)
+	assert.Equal(t, "TEST01", ests[0].TaskID)
 	assert.Equal(t, 0.1, ests[0].BestCase)
 	assert.Equal(t, 0.5, ests[0].MostLikelyCase)
 	assert.Equal(t, 1.0, ests[0].WorstCase)
 	assert.Equal(t, "Rabbit", ests[1].UserName)
-	assert.Equal(t, "TEST01", ests[1].WorkPackageID)
+	assert.Equal(t, "TEST01", ests[1].TaskID)
 	assert.Equal(t, 0.5, ests[1].BestCase)
 	assert.Equal(t, 1.5, ests[1].MostLikelyCase)
 	assert.Equal(t, 2.5, ests[1].WorstCase)
@@ -884,7 +884,7 @@ func TestRemoveEstimateFromSessionFailsDueToWrongTokenLength(t *testing.T) {
 	m.On("Exec", "CREATE TABLE sessions").Return(nil)
 	gds, err := NewGenjiDatastore(m)
 	assert.NoError(t, err)
-	err2 := gds.RemoveEstimate("1234567890123456789012345678901212", Estimate{WorkPackageID: "TEST01", UserName: "Tigger", BestCase: 0.1, MostLikelyCase: 0.5, WorstCase: 1.0})
+	err2 := gds.RemoveEstimate("1234567890123456789012345678901212", Estimate{TaskID: "TEST01", UserName: "Tigger", BestCase: 0.1, MostLikelyCase: 0.5, WorstCase: 1.0})
 	assert.Equal(t, "Session token does not match desired length", err2.Error())
 }
 
@@ -895,7 +895,7 @@ func TestRemoveEstimateFromSessionFailsDueToNonExistingSessionWithRealDB(t *test
 	assert.NoError(t, err)
 	_, err2 := gds.CreateSession()
 	assert.NoError(t, err2)
-	err3 := gds.RemoveEstimate("12345678901234567890123456789012", Estimate{WorkPackageID: "TEST01", UserName: "Tigger", BestCase: 0.1, MostLikelyCase: 0.5, WorstCase: 1.0})
+	err3 := gds.RemoveEstimate("12345678901234567890123456789012", Estimate{TaskID: "TEST01", UserName: "Tigger", BestCase: 0.1, MostLikelyCase: 0.5, WorstCase: 1.0})
 	assert.Equal(t, "Specified session does not exist", err3.Error())
 }
 
@@ -910,18 +910,18 @@ func TestRemoveEstimateFromSessionFailsDueTOEstimateNotBeingPartOfSessionWithRea
 	assert.NoError(t, err3)
 	err4 := gds.JoinSession(token, "Rabbit")
 	assert.NoError(t, err4)
-	err5 := gds.AddWorkPackage(token, "TEST01", "")
+	err5 := gds.AddTask(token, "TEST01", "")
 	assert.NoError(t, err5)
-	err6 := gds.AddWorkPackage(token, "TEST02", "eat honey")
+	err6 := gds.AddTask(token, "TEST02", "eat honey")
 	assert.NoError(t, err6)
-	err7 := gds.AddEstimate(token, Estimate{WorkPackageID: "TEST01", UserName: "Tigger", BestCase: 0.1, MostLikelyCase: 0.5, WorstCase: 1.0})
+	err7 := gds.AddEstimate(token, Estimate{TaskID: "TEST01", UserName: "Tigger", BestCase: 0.1, MostLikelyCase: 0.5, WorstCase: 1.0})
 	assert.NoError(t, err7)
-	err8 := gds.AddEstimate(token, Estimate{WorkPackageID: "TEST01", UserName: "Rabbit", BestCase: 0.5, MostLikelyCase: 1.5, WorstCase: 2.5})
+	err8 := gds.AddEstimate(token, Estimate{TaskID: "TEST01", UserName: "Rabbit", BestCase: 0.5, MostLikelyCase: 1.5, WorstCase: 2.5})
 	assert.NoError(t, err8)
 	ests, err9 := gds.GetEstimates(token)
 	assert.NoError(t, err9)
 	assert.Len(t, ests, 2)
-	err10 := gds.RemoveEstimate(token, Estimate{WorkPackageID: "TEST02", UserName: "Rabbit", BestCase: 0.5, MostLikelyCase: 1.5, WorstCase: 2.5})
+	err10 := gds.RemoveEstimate(token, Estimate{TaskID: "TEST02", UserName: "Rabbit", BestCase: 0.5, MostLikelyCase: 1.5, WorstCase: 2.5})
 	assert.Equal(t, "Estimate with ID: TEST02 and user name: Rabbit is not part of session", err10.Error())
 	ests2, err11 := gds.GetEstimates(token)
 	assert.NoError(t, err11)
@@ -939,18 +939,18 @@ func TestRemoveEstimateFromSessionSuccessWithRealDB(t *testing.T) {
 	assert.NoError(t, err3)
 	err4 := gds.JoinSession(token, "Rabbit")
 	assert.NoError(t, err4)
-	err5 := gds.AddWorkPackage(token, "TEST01", "")
+	err5 := gds.AddTask(token, "TEST01", "")
 	assert.NoError(t, err5)
-	err6 := gds.AddWorkPackage(token, "TEST02", "eat honey")
+	err6 := gds.AddTask(token, "TEST02", "eat honey")
 	assert.NoError(t, err6)
-	err7 := gds.AddEstimate(token, Estimate{WorkPackageID: "TEST01", UserName: "Tigger", BestCase: 0.1, MostLikelyCase: 0.5, WorstCase: 1.0})
+	err7 := gds.AddEstimate(token, Estimate{TaskID: "TEST01", UserName: "Tigger", BestCase: 0.1, MostLikelyCase: 0.5, WorstCase: 1.0})
 	assert.NoError(t, err7)
-	err8 := gds.AddEstimate(token, Estimate{WorkPackageID: "TEST01", UserName: "Rabbit", BestCase: 0.5, MostLikelyCase: 1.5, WorstCase: 2.5})
+	err8 := gds.AddEstimate(token, Estimate{TaskID: "TEST01", UserName: "Rabbit", BestCase: 0.5, MostLikelyCase: 1.5, WorstCase: 2.5})
 	assert.NoError(t, err8)
 	ests, err9 := gds.GetEstimates(token)
 	assert.NoError(t, err9)
 	assert.Len(t, ests, 2)
-	err10 := gds.RemoveEstimate(token, Estimate{WorkPackageID: "TEST01", UserName: "Rabbit", BestCase: 0.5, MostLikelyCase: 1.5, WorstCase: 2.5})
+	err10 := gds.RemoveEstimate(token, Estimate{TaskID: "TEST01", UserName: "Rabbit", BestCase: 0.5, MostLikelyCase: 1.5, WorstCase: 2.5})
 	assert.NoError(t, err10)
 	ests2, err11 := gds.GetEstimates(token)
 	assert.NoError(t, err11)

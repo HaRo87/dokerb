@@ -25,9 +25,9 @@ type GenjiDatastore struct {
 }
 
 type session struct {
-	Token        string
-	Users        []string
-	Workpackages []WorkPackage
+	Token string
+	Users []string
+	Tasks []Task
 }
 
 var lock = &sync.Mutex{}
@@ -158,9 +158,9 @@ func (g GenjiDatastore) RemoveSession(token string) error {
 	return err
 }
 
-// AddWorkPackage adds a new work package to the specified session
+// AddTask adds a new task to the specified session
 // identified by the provided ID and with an optional summary
-func (g GenjiDatastore) AddWorkPackage(token, id, summary string) error {
+func (g GenjiDatastore) AddTask(token, id, summary string) error {
 	if len(token) != defaultTokenLength {
 		return fmt.Errorf("Session token does not match desired length")
 	}
@@ -172,24 +172,24 @@ func (g GenjiDatastore) AddWorkPackage(token, id, summary string) error {
 	if !se {
 		return fmt.Errorf("Specified session does not exist")
 	}
-	var wps []WorkPackage
-	wps, err = getWorkpackagesFromSession(token)
+	var tasks []Task
+	tasks, err = getTasksFromSession(token)
 
-	if !workpackageExists(wps, id) {
-		wps = append(wps, WorkPackage{ID: id, Summary: summary})
+	if !taskExists(tasks, id) {
+		tasks = append(tasks, Task{ID: id, Summary: summary})
 	} else {
-		return fmt.Errorf("Workpackage with ID: %s already part of session", id)
+		return fmt.Errorf("Task with ID: %s already part of session", id)
 	}
 
-	err = si.db.Exec("UPDATE sessions SET workpackages = ? WHERE token = ?", wps, token)
+	err = si.db.Exec("UPDATE sessions SET tasks = ? WHERE token = ?", tasks, token)
 
 	return err
 }
 
-// RemoveWorkPackage removes a work package from the specified
-// session where the work package is identified by the provided
+// RemoveTask removes a task from the specified
+// session where the task is identified by the provided
 // ID
-func (g GenjiDatastore) RemoveWorkPackage(token, id string) error {
+func (g GenjiDatastore) RemoveTask(token, id string) error {
 	if len(token) != defaultTokenLength {
 		return fmt.Errorf("Session token does not match desired length")
 	}
@@ -202,29 +202,29 @@ func (g GenjiDatastore) RemoveWorkPackage(token, id string) error {
 		return fmt.Errorf("Specified session does not exist")
 	}
 
-	var wps []WorkPackage
+	var tasks []Task
 
-	wps, err = getWorkpackagesFromSession(token)
-
-	if err != nil {
-		return fmt.Errorf("Unable to get workpackages from session")
-	}
-
-	wps, err = removeWorkpackage(wps, id)
+	tasks, err = getTasksFromSession(token)
 
 	if err != nil {
-		return fmt.Errorf("Unable to remove workpackage: %s from session", id)
+		return fmt.Errorf("Unable to get tasks from session")
 	}
 
-	err = si.db.Exec("UPDATE sessions SET workpackages = ? WHERE token = ?", wps, token)
+	tasks, err = removeTask(tasks, id)
+
+	if err != nil {
+		return fmt.Errorf("Unable to remove Task: %s from session", id)
+	}
+
+	err = si.db.Exec("UPDATE sessions SET tasks = ? WHERE token = ?", tasks, token)
 
 	return err
 }
 
-// AddEstimateToWorkPackage adds provided effort and standard deviation estimates
-// to the work package specified by the given id assigned to a specific
+// AddEstimateToTask adds provided effort and standard deviation estimates
+// to the task specified by the given id assigned to a specific
 // session identified by the given token
-func (g GenjiDatastore) AddEstimateToWorkPackage(token, id string, effort, standardDeviation float64) error {
+func (g GenjiDatastore) AddEstimateToTask(token, id string, effort, standardDeviation float64) error {
 	if len(token) != defaultTokenLength {
 		return fmt.Errorf("Session token does not match desired length")
 	}
@@ -243,36 +243,36 @@ func (g GenjiDatastore) AddEstimateToWorkPackage(token, id string, effort, stand
 		return fmt.Errorf("Specified session does not exist")
 	}
 
-	var wps []WorkPackage
+	var tasks []Task
 
-	wps, err = getWorkpackagesFromSession(token)
+	tasks, err = getTasksFromSession(token)
 
 	if err != nil {
-		return fmt.Errorf("Unable to get workpackages from session")
+		return fmt.Errorf("Unable to get tasks from session")
 	}
 
-	if !workpackageExists(wps, id) {
-		return fmt.Errorf("Work package with ID: %s does not exist", id)
+	if !taskExists(tasks, id) {
+		return fmt.Errorf("Task with ID: %s does not exist", id)
 	}
 
-	for i, elem := range wps {
-		if elem.ID == id {
-			elem.Effort = effort
-			elem.StandardDeviation = standardDeviation
-			wps[i] = elem
+	for i, task := range tasks {
+		if task.ID == id {
+			task.Effort = effort
+			task.StandardDeviation = standardDeviation
+			tasks[i] = task
 			break
 		}
 	}
 
-	err = si.db.Exec("UPDATE sessions SET workpackages = ? WHERE token = ?", wps, token)
+	err = si.db.Exec("UPDATE sessions SET tasks = ? WHERE token = ?", tasks, token)
 
 	return err
 }
 
-// RemoveEstimateFromWorkPackage removes the effort and standard deviation estimates from
-// a specified work packages by the given id assigned to a specific
+// RemoveEstimateFromTask removes the effort and standard deviation estimates from
+// a specified task by the given id assigned to a specific
 // session identified by the given token
-func (g GenjiDatastore) RemoveEstimateFromWorkPackage(token, id string) error {
+func (g GenjiDatastore) RemoveEstimateFromTask(token, id string) error {
 	if len(token) != defaultTokenLength {
 		return fmt.Errorf("Session token does not match desired length")
 	}
@@ -285,28 +285,28 @@ func (g GenjiDatastore) RemoveEstimateFromWorkPackage(token, id string) error {
 		return fmt.Errorf("Specified session does not exist")
 	}
 
-	var wps []WorkPackage
+	var tasks []Task
 
-	wps, err = getWorkpackagesFromSession(token)
+	tasks, err = getTasksFromSession(token)
 
 	if err != nil {
-		return fmt.Errorf("Unable to get workpackages from session")
+		return fmt.Errorf("Unable to get tasks from session")
 	}
 
-	if !workpackageExists(wps, id) {
-		return fmt.Errorf("Work package with ID: %s does not exist", id)
+	if !taskExists(tasks, id) {
+		return fmt.Errorf("Task with ID: %s does not exist", id)
 	}
 
-	for i, elem := range wps {
-		if elem.ID == id {
-			elem.Effort = 0.0
-			elem.StandardDeviation = 0.0
-			wps[i] = elem
+	for i, task := range tasks {
+		if task.ID == id {
+			task.Effort = 0.0
+			task.StandardDeviation = 0.0
+			tasks[i] = task
 			break
 		}
 	}
 
-	err = si.db.Exec("UPDATE sessions SET workpackages = ? WHERE token = ?", wps, token)
+	err = si.db.Exec("UPDATE sessions SET tasks = ? WHERE token = ?", tasks, token)
 
 	return err
 }
@@ -327,20 +327,20 @@ func (g GenjiDatastore) GetUsers(token string) ([]string, error) {
 	return users, err
 }
 
-// GetWorkPackages returns all work packages of a given session
-func (g GenjiDatastore) GetWorkPackages(token string) ([]WorkPackage, error) {
+// GetTasks returns all tasks of a given session
+func (g GenjiDatastore) GetTasks(token string) ([]Task, error) {
 	if len(token) != defaultTokenLength {
-		return []WorkPackage{}, fmt.Errorf("Session token does not match desired length")
+		return []Task{}, fmt.Errorf("Session token does not match desired length")
 	}
 
 	se, err := sessionExists(token)
 	if !se {
-		return []WorkPackage{}, fmt.Errorf("Specified session does not exist")
+		return []Task{}, fmt.Errorf("Specified session does not exist")
 	}
 
-	workpackages, err := getWorkpackagesFromSession(token)
+	tasks, err := getTasksFromSession(token)
 
-	return workpackages, err
+	return tasks, err
 }
 
 // AddEstimate adds a new estimate to the specified session
@@ -349,8 +349,8 @@ func (g GenjiDatastore) AddEstimate(token string, estimate Estimate) error {
 		return fmt.Errorf("Session token does not match desired length")
 	}
 
-	if estimate.WorkPackageID == "" {
-		return fmt.Errorf("Work Package ID should not be empty")
+	if estimate.TaskID == "" {
+		return fmt.Errorf("Task ID should not be empty")
 	}
 
 	if estimate.UserName == "" {
@@ -382,12 +382,12 @@ func (g GenjiDatastore) AddEstimate(token string, estimate Estimate) error {
 		return fmt.Errorf("User: %s is not part of session", estimate.UserName)
 	}
 
-	var wps []WorkPackage
+	var tasks []Task
 
-	wps, err = getWorkpackagesFromSession(token)
+	tasks, err = getTasksFromSession(token)
 
-	if !workpackageExists(wps, estimate.WorkPackageID) {
-		return fmt.Errorf("Work Package with ID: %s is not part of session", estimate.WorkPackageID)
+	if !taskExists(tasks, estimate.TaskID) {
+		return fmt.Errorf("Task with ID: %s is not part of session", estimate.TaskID)
 	}
 
 	est = append(est, estimate)
@@ -504,26 +504,26 @@ func getUsersFromSession(t string) ([]string, error) {
 	return users, err
 }
 
-func getWorkpackagesFromSession(t string) ([]WorkPackage, error) {
-	var wps []WorkPackage
+func getTasksFromSession(t string) ([]Task, error) {
+	var tasks []Task
 
-	res, err := si.db.Query("SELECT workpackages FROM sessions WHERE token = ?", t)
+	res, err := si.db.Query("SELECT tasks FROM sessions WHERE token = ?", t)
 
 	if err != nil {
-		return wps, err
+		return tasks, err
 	}
 
 	defer res.Close()
 
 	err = res.Iterate(func(d document.Document) error {
-		err = document.Scan(d, &wps)
+		err = document.Scan(d, &tasks)
 		if err != nil {
 			return err
 		}
 		return nil
 	})
 
-	return wps, err
+	return tasks, err
 }
 
 func getEstimatesFromSession(t string) ([]Estimate, error) {
@@ -561,24 +561,24 @@ func userExists(users []string, user string) bool {
 	return userExists
 }
 
-func workpackageExists(workpackages []WorkPackage, id string) bool {
-	workpackageExists := false
+func taskExists(tasks []Task, id string) bool {
+	taskExists := false
 
-	for _, elem := range workpackages {
-		if elem.ID == id {
-			workpackageExists = true
+	for _, task := range tasks {
+		if task.ID == id {
+			taskExists = true
 			break
 		}
 	}
 
-	return workpackageExists
+	return taskExists
 }
 
 func estimateExists(estimates []Estimate, estimate Estimate) bool {
 	estimateExists := false
 
 	for _, elem := range estimates {
-		if elem.WorkPackageID == estimate.WorkPackageID && elem.UserName == estimate.UserName {
+		if elem.TaskID == estimate.TaskID && elem.UserName == estimate.UserName {
 			estimateExists = true
 			break
 		}
@@ -602,32 +602,32 @@ func removeUser(users []string, user string) ([]string, error) {
 	return users, nil
 }
 
-func removeWorkpackage(workpackages []WorkPackage, id string) ([]WorkPackage, error) {
-	if workpackageExists(workpackages, id) {
-		for i, e := range workpackages {
-			if e.ID == id {
-				workpackages = append(workpackages[:i], workpackages[i+1:]...)
+func removeTask(tasks []Task, id string) ([]Task, error) {
+	if taskExists(tasks, id) {
+		for i, task := range tasks {
+			if task.ID == id {
+				tasks = append(tasks[:i], tasks[i+1:]...)
 				break
 			}
 		}
 	} else {
-		return workpackages, fmt.Errorf("Workpackage with ID: %s is not part of session", id)
+		return tasks, fmt.Errorf("Task with ID: %s is not part of session", id)
 	}
 
-	return workpackages, nil
+	return tasks, nil
 }
 
 func removeEstimate(estimates []Estimate, estimate Estimate) ([]Estimate, error) {
 	if estimateExists(estimates, estimate) {
 		for i, e := range estimates {
-			if e.WorkPackageID == estimate.WorkPackageID && e.UserName == estimate.UserName {
+			if e.TaskID == estimate.TaskID && e.UserName == estimate.UserName {
 				estimates = append(estimates[:i], estimates[i+1:]...)
 				break
 			}
 		}
 	} else {
 		return estimates, fmt.Errorf("Estimate with ID: %s and user name: %s is not part of session",
-			estimate.WorkPackageID,
+			estimate.TaskID,
 			estimate.UserName)
 	}
 

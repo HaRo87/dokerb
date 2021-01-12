@@ -10,7 +10,7 @@ import (
 // CalculateAverageEstimate calculates the average estimate of all provided
 // estimates matching a given work package ID
 func CalculateAverageEstimate(estimates []datastore.Estimate, id string) (estimate.Estimator, error) {
-	ests, err := ExtractEstimatesForWorkPackage(estimates, id)
+	ests, err := ExtractEstimatesForTask(estimates, id)
 
 	if err != nil {
 		return nil, err
@@ -41,7 +41,7 @@ func CalculateAverageEstimate(estimates []datastore.Estimate, id string) (estima
 // GetUsersWithMaxDistanceBetweenEffort returns the two users, if they
 // exist, who have the max distance between their effort estimates
 func GetUsersWithMaxDistanceBetweenEffort(estimates []datastore.Estimate, id string) ([]string, error) {
-	ests, err := ExtractEstimatesForWorkPackage(estimates, id)
+	ests, err := ExtractEstimatesForTask(estimates, id)
 
 	if err != nil {
 		return nil, err
@@ -68,11 +68,11 @@ func GetUsersWithMaxDistanceBetweenEffort(estimates []datastore.Estimate, id str
 	return []string{l.GetFirstUser(), l.GetLastUser()}, nil
 }
 
-// ExtractEstimatesForWorkPackage extracts all estimates for a specified
+// ExtractEstimatesForTask extracts all estimates for a specified
 // work package ID
-func ExtractEstimatesForWorkPackage(estimates []datastore.Estimate, id string) ([]datastore.Estimate, error) {
+func ExtractEstimatesForTask(estimates []datastore.Estimate, id string) ([]datastore.Estimate, error) {
 	if id == "" {
-		return []datastore.Estimate{}, fmt.Errorf("Work Package ID cannot be empty")
+		return []datastore.Estimate{}, fmt.Errorf("Task ID cannot be empty")
 	}
 	if len(estimates) < 1 {
 		return []datastore.Estimate{}, fmt.Errorf("Not enough data to process")
@@ -80,13 +80,13 @@ func ExtractEstimatesForWorkPackage(estimates []datastore.Estimate, id string) (
 	var ests []datastore.Estimate
 
 	for _, est := range estimates {
-		if est.WorkPackageID == id {
+		if est.TaskID == id {
 			ests = append(ests, est)
 		}
 	}
 
 	if len(ests) < 1 {
-		return []datastore.Estimate{}, fmt.Errorf("Specified work package with ID: %s is not part of estimates", id)
+		return []datastore.Estimate{}, fmt.Errorf("Specified task with ID: %s is not part of estimates", id)
 	}
 
 	return ests, nil

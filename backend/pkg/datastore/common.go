@@ -7,19 +7,19 @@ type DataStore interface {
 	JoinSession(token, name string) error
 	LeaveSession(token, name string) error
 	RemoveSession(token string) error
-	AddWorkPackage(token, id, summary string) error
-	RemoveWorkPackage(token, id string) error
-	AddEstimateToWorkPackage(token, id string, effort, standardDeviation float64) error
-	RemoveEstimateFromWorkPackage(token, id string) error
+	AddTask(token, id, summary string) error
+	RemoveTask(token, id string) error
+	AddEstimateToTask(token, id string, effort, standardDeviation float64) error
+	RemoveEstimateFromTask(token, id string) error
 	GetUsers(token string) ([]string, error)
-	GetWorkPackages(token string) ([]WorkPackage, error)
+	GetTasks(token string) ([]Task, error)
 	AddEstimate(token string, estimate Estimate) error
 	RemoveEstimate(token string, estimate Estimate) error
 	GetEstimates(token string) ([]Estimate, error)
 }
 
-// WorkPackage defines a single work package
-type WorkPackage struct {
+// Task defines a single task
+type Task struct {
 	ID                string
 	Summary           string
 	Effort            float64
@@ -27,9 +27,9 @@ type WorkPackage struct {
 }
 
 // Estimate defines a user estimate for a specific
-// work package
+// task
 type Estimate struct {
-	WorkPackageID  string
+	TaskID         string
 	UserName       string
 	BestCase       float64
 	MostLikelyCase float64
