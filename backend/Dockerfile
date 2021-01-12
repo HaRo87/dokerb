@@ -1,4 +1,4 @@
-FROM golang:1.14-alpine AS builder
+FROM golang:1.15-alpine AS builder
 
 # Move to working directory (/build).
 WORKDIR /build
@@ -17,8 +17,9 @@ RUN go build -ldflags="-w -s" -o apiserver .
 FROM scratch
 
 # Copy binary and config files from /build to root folder of scratch container.
-COPY --from=builder ["/build/apiserver", "/build/configs/apiserver.yml", "/"]
-
+COPY --from=builder ["/build/apiserver", "/build/configs/apiserver.yml", "/build/static", "/"]
+# Copy static files for serving
+COPY --from=builder ["/build/static", "/static"]
 # Export necessary port.
 EXPOSE 5000
 

@@ -7,7 +7,6 @@ tasks:
   # Default task
   default:
     cmds:
-      - task: frontend-run
       - task: backend-run
 
   # Backend tasks
@@ -24,16 +23,11 @@ tasks:
     cmds:
       - task build
 
-  # Frontend tasks
-  frontend-test:
-    dir: ./frontend
+  # Docker tasks
+  docker-build:
+    dir: ./backend
     cmds:
-      - npm run test
-  frontend-run:
-    dir: ./frontend
+      - docker build -t dokerb .
+  docker-run:
     cmds:
-      - npm start
-  frontend-build:
-    dir: ./frontend
-    cmds:
-      - npm run build
+      - docker run --rm -p 5000:5000 dokerb
