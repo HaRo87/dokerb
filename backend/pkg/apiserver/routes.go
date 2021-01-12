@@ -38,19 +38,19 @@ type UsersResponse struct {
 	Users   []string `json:"users" example:"Tigger,Rabbit" format:"[]string"`
 }
 
-// WorkPackagesResponse represents the get work packages response
-type WorkPackagesResponse struct {
-	Message      string                  `json:"message" example:"ok" format:"string"`
-	Workpackages []datastore.WorkPackage `json:"workpackages" format:"[]datastore.WorkPackage"`
+// TaskResponse represents the get tasks response
+type TaskResponse struct {
+	Message string           `json:"message" example:"ok" format:"string"`
+	Tasks   []datastore.Task `json:"tasks" format:"[]datastore.Task"`
 }
 
-// WorkPackage represents a work package
-type WorkPackage struct {
+// Task represents a task
+type Task struct {
 	ID      string `json:"id" example:"TEST01" format:"string"`
 	Summary string `json:"summary" example:"a sample task" format:"string"`
 }
 
-// Estimate represents a work package estimate
+// Estimate represents a estimate for a task
 type Estimate struct {
 	Effort            float64 `json:"effort" example:"1.5" format:"float64"`
 	StandardDeviation float64 `json:"standarddeviation" example:"0.2" format:"float64"`
@@ -64,9 +64,9 @@ type CalcEstimate struct {
 	Estimate Estimate `json:"estimate" format:"Estimate"`
 }
 
-// PerUserEstimate represents a user and work package individual estimate
+// PerUserEstimate represents a user and task individual estimate
 type PerUserEstimate struct {
-	WorkPackageID  string  `json:"id" example:"TEST01" format:"string"`
+	TaskID         string  `json:"id" example:"TEST01" format:"string"`
 	UserName       string  `json:"user" example:"Tigger" format:"string"`
 	BestCase       float64 `json:"b" example:"1.5" format:"float64"`
 	MostLikelyCase float64 `json:"m" example:"2.0" format:"float64"`
@@ -115,15 +115,15 @@ func Routes(app *fiber.App, store datastore.DataStore) {
 
 	addRemoveUserFromSessionRoute(APIGroup, store)
 
-	addGetWorkPackagesFromSessionRoute(APIGroup, store)
+	addGetTasksFromSessionRoute(APIGroup, store)
 
-	addAddWorkPackageToSessionRoute(APIGroup, store)
+	addAddTaskToSessionRoute(APIGroup, store)
 
-	addRemoveWorkPackageFromSessionRoute(APIGroup, store)
+	addRemoveTaskFromSessionRoute(APIGroup, store)
 
-	addUpdateWorkPackageEstimateOfWorkPackageRoute(APIGroup, store)
+	addUpdateTaskEstimateOfTaskRoute(APIGroup, store)
 
-	addResetEstimateOfWorkPackageRoute(APIGroup, store)
+	addResetEstimateOfTaskRoute(APIGroup, store)
 
 	addAddUserEstimateToSessionRoute(APIGroup, store)
 
@@ -131,9 +131,9 @@ func Routes(app *fiber.App, store datastore.DataStore) {
 
 	addGetUserEstimatesFromSessionRoute(APIGroup, store)
 
-	addGetAverageEstimateForWorkPackageFromSessionRoute(APIGroup, store)
+	addGetAverageEstimateForTaskFromSessionRoute(APIGroup, store)
 
-	addGetUserWithMaxEstimateDistanceForWorkPackageFromSessionRoute(APIGroup, store)
+	addGetUserWithMaxEstimateDistanceForTaskFromSessionRoute(APIGroup, store)
 }
 
 // Adding the documentation route
@@ -318,18 +318,18 @@ func addRemoveUserFromSessionRoute(api fiber.Router, store datastore.DataStore) 
 	})
 }
 
-// Adding the Get work packages from session route
-// @Summary Get the work packages of a session
-// @Description Gets all work packages of an existing session
-// @Tags workpackage
+// Adding the Get tasks from session route
+// @Summary Get the tasks of a session
+// @Description Gets all tasks of an existing session
+// @Tags task
 // @Produce  json
 // @Param token path string true "Session Token"
-// @Success 200 {object} WorkPackagesResponse
+// @Success 200 {object} TaskResponse
 // @Failure 500 {object} ErrorResponse
-// @Router /sessions/{token}/workpackages [get]
-func addGetWorkPackagesFromSessionRoute(api fiber.Router, store datastore.DataStore) {
-	api.Get("/sessions/:token/workpackages", func(c *fiber.Ctx) error {
-		wps, e := store.GetWorkPackages(c.Params("token"))
+// @Router /sessions/{token}/tasks [get]
+func addGetTasksFromSessionRoute(api fiber.Router, store datastore.DataStore) {
+	api.Get("/sessions/:token/tasks", func(c *fiber.Ctx) error {
+		tasks, e := store.GetTasks(c.Params("token"))
 
 		if e != nil {
 			data := ErrorResponse{
@@ -339,30 +339,30 @@ func addGetWorkPackagesFromSessionRoute(api fiber.Router, store datastore.DataSt
 			return c.Status(500).JSON(data)
 		}
 
-		data := WorkPackagesResponse{
-			Message:      "ok",
-			Workpackages: wps,
+		data := TaskResponse{
+			Message: "ok",
+			Tasks:   tasks,
 		}
 		return c.Status(200).JSON(data)
 	})
 }
 
-// Adding the Add work package to session route
-// @Summary Add a new work package to a existing session
-// @Description Adds a new (non-existing) work package to an existing session
-// @Tags workpackage
+// Adding the Add task to session route
+// @Summary Add a new task to a existing session
+// @Description Adds a new (non-existing) task to an existing session
+// @Tags task
 // @Produce  json
 // @Param token path string true "Session Token"
-// @Param  workpackage body WorkPackage true "New Work Package"
+// @Param  task body Task true "New Task"
 // @Success 200 {object} GeneralResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
-// @Router /sessions/{token}/workpackages [post]
-func addAddWorkPackageToSessionRoute(api fiber.Router, store datastore.DataStore) {
-	api.Post("/sessions/:token/workpackages", func(c *fiber.Ctx) error {
-		wp := new(WorkPackage)
+// @Router /sessions/{token}/tasks [post]
+func addAddTaskToSessionRoute(api fiber.Router, store datastore.DataStore) {
+	api.Post("/sessions/:token/tasks", func(c *fiber.Ctx) error {
+		task := new(Task)
 
-		if err := c.BodyParser(wp); err != nil {
+		if err := c.BodyParser(task); err != nil {
 			data := ErrorResponse{
 				Message: "error",
 				Reason:  err.Error(),
@@ -370,7 +370,7 @@ func addAddWorkPackageToSessionRoute(api fiber.Router, store datastore.DataStore
 			return c.Status(400).JSON(data)
 		}
 
-		if err := store.AddWorkPackage(c.Params("token"), wp.ID, wp.Summary); err != nil {
+		if err := store.AddTask(c.Params("token"), task.ID, task.Summary); err != nil {
 			data := ErrorResponse{
 				Message: "error",
 				Reason:  err.Error(),
@@ -380,25 +380,25 @@ func addAddWorkPackageToSessionRoute(api fiber.Router, store datastore.DataStore
 
 		data := GeneralResponse{
 			Message: "ok",
-			Route:   "/sessions/" + c.Params("token") + "/workpackages/" + wp.ID,
+			Route:   "/sessions/" + c.Params("token") + "/tasks/" + task.ID,
 		}
 		return c.Status(200).JSON(data)
 	})
 }
 
-// Adding the Remove work package from session route
-// @Summary Remove a work package from a session
-// @Description Removes a existing work package from an existing session
-// @Tags workpackage
+// Adding the Remove task from session route
+// @Summary Remove a task from a session
+// @Description Removes a existing task from an existing session
+// @Tags task
 // @Produce  json
 // @Param token path string true "Session Token"
-// @Param id path string true "ID of the work package"
+// @Param id path string true "ID of the task"
 // @Success 200 {object} GeneralResponse
 // @Failure 500 {object} ErrorResponse
-// @Router /sessions/{token}/workpackages/{id} [delete]
-func addRemoveWorkPackageFromSessionRoute(api fiber.Router, store datastore.DataStore) {
-	api.Delete("/sessions/:token/workpackages/:id", func(c *fiber.Ctx) error {
-		if err := store.RemoveWorkPackage(c.Params("token"), c.Params("id")); err != nil {
+// @Router /sessions/{token}/tasks/{id} [delete]
+func addRemoveTaskFromSessionRoute(api fiber.Router, store datastore.DataStore) {
+	api.Delete("/sessions/:token/tasks/:id", func(c *fiber.Ctx) error {
+		if err := store.RemoveTask(c.Params("token"), c.Params("id")); err != nil {
 			data := ErrorResponse{
 				Message: "error",
 				Reason:  err.Error(),
@@ -413,20 +413,20 @@ func addRemoveWorkPackageFromSessionRoute(api fiber.Router, store datastore.Data
 	})
 }
 
-// Adding the Update estimate of work package route
-// @Summary Update the estimate of a work package
-// @Description Updates a estimate of a existing work package inside a existing session
-// @Tags workpackage
+// Adding the Update estimate of task route
+// @Summary Update the estimate of a task
+// @Description Updates a estimate of a existing task inside a existing session
+// @Tags task
 // @Produce  json
 // @Param token path string true "Session Token"
-// @Param id path string true "ID of the work package"
+// @Param id path string true "ID of the task"
 // @Param  estimate body Estimate true "New Estimate"
 // @Success 200 {object} GeneralResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
-// @Router /sessions/{token}/workpackages/{id} [put]
-func addUpdateWorkPackageEstimateOfWorkPackageRoute(api fiber.Router, store datastore.DataStore) {
-	api.Put("/sessions/:token/workpackages/:id", func(c *fiber.Ctx) error {
+// @Router /sessions/{token}/tasks/{id} [put]
+func addUpdateTaskEstimateOfTaskRoute(api fiber.Router, store datastore.DataStore) {
+	api.Put("/sessions/:token/tasks/:id", func(c *fiber.Ctx) error {
 		es := new(Estimate)
 
 		if err := c.BodyParser(es); err != nil {
@@ -437,7 +437,7 @@ func addUpdateWorkPackageEstimateOfWorkPackageRoute(api fiber.Router, store data
 			return c.Status(400).JSON(data)
 		}
 
-		if err := store.AddEstimateToWorkPackage(c.Params("token"), c.Params("id"), es.Effort, es.StandardDeviation); err != nil {
+		if err := store.AddEstimateToTask(c.Params("token"), c.Params("id"), es.Effort, es.StandardDeviation); err != nil {
 			data := ErrorResponse{
 				Message: "error",
 				Reason:  err.Error(),
@@ -452,19 +452,19 @@ func addUpdateWorkPackageEstimateOfWorkPackageRoute(api fiber.Router, store data
 	})
 }
 
-// Adding the Delete estimate from work package route
-// @Summary Delete the estimate from a work package
-// @Description Removes the estimate from an existing work package
-// @Tags workpackage
+// Adding the Delete estimate from task route
+// @Summary Delete the estimate from a task
+// @Description Removes the estimate from an existing task
+// @Tags task
 // @Produce  json
 // @Param token path string true "Session Token"
-// @Param id path string true "ID of the work package"
+// @Param id path string true "ID of the task"
 // @Success 200 {object} GeneralResponse
 // @Failure 500 {object} ErrorResponse
-// @Router /sessions/{token}/workpackages/{id}/estimate [delete]
-func addResetEstimateOfWorkPackageRoute(api fiber.Router, store datastore.DataStore) {
-	api.Delete("/sessions/:token/workpackages/:id/estimate", func(c *fiber.Ctx) error {
-		if err := store.RemoveEstimateFromWorkPackage(c.Params("token"), c.Params("id")); err != nil {
+// @Router /sessions/{token}/tasks/{id}/estimate [delete]
+func addResetEstimateOfTaskRoute(api fiber.Router, store datastore.DataStore) {
+	api.Delete("/sessions/:token/tasks/:id/estimate", func(c *fiber.Ctx) error {
+		if err := store.RemoveEstimateFromTask(c.Params("token"), c.Params("id")); err != nil {
 			data := ErrorResponse{
 				Message: "error",
 				Reason:  err.Error(),
@@ -480,8 +480,8 @@ func addResetEstimateOfWorkPackageRoute(api fiber.Router, store datastore.DataSt
 }
 
 // Adding the Add user estimate to session route
-// @Summary Add the estimate of a user for a work package
-// @Description Adds a estimate of a existing user of a existing work package inside a existing session
+// @Summary Add the estimate of a user for a task
+// @Description Adds a estimate of a existing user of a existing task inside a existing session
 // @Tags estimate
 // @Produce  json
 // @Param token path string true "Session Token"
@@ -503,7 +503,7 @@ func addAddUserEstimateToSessionRoute(api fiber.Router, store datastore.DataStor
 		}
 
 		est := datastore.Estimate{
-			WorkPackageID:  es.WorkPackageID,
+			TaskID:         es.TaskID,
 			UserName:       es.UserName,
 			BestCase:       es.BestCase,
 			MostLikelyCase: es.MostLikelyCase,
@@ -520,20 +520,20 @@ func addAddUserEstimateToSessionRoute(api fiber.Router, store datastore.DataStor
 
 		data := GeneralResponse{
 			Message: "ok",
-			Route:   "/sessions/" + c.Params("token") + "/estimates/" + es.UserName + "/" + es.WorkPackageID,
+			Route:   "/sessions/" + c.Params("token") + "/estimates/" + es.UserName + "/" + es.TaskID,
 		}
 		return c.Status(200).JSON(data)
 	})
 }
 
 // Adding the Remove user estimate from session route
-// @Summary Remove the estimate of a user for a work package
-// @Description Removes a estimate of a existing user of a existing work package inside a existing session
+// @Summary Remove the estimate of a user for a task
+// @Description Removes a estimate of a existing user of a existing task inside a existing session
 // @Tags estimate
 // @Produce  json
 // @Param token path string true "Session Token"
 // @Param  user path string true "User Name"
-// @Param  id path string true "Work Package ID"
+// @Param  id path string true "Task ID"
 // @Success 200 {object} GeneralResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
@@ -542,8 +542,8 @@ func addRemoveUserEstimateFromSessionRoute(api fiber.Router, store datastore.Dat
 	api.Delete("/sessions/:token/estimates/:user/:id", func(c *fiber.Ctx) error {
 
 		est := datastore.Estimate{
-			WorkPackageID: c.Params("id"),
-			UserName:      c.Params("user"),
+			TaskID:   c.Params("id"),
+			UserName: c.Params("user"),
 		}
 
 		if err := store.RemoveEstimate(c.Params("token"), est); err != nil {
@@ -562,8 +562,8 @@ func addRemoveUserEstimateFromSessionRoute(api fiber.Router, store datastore.Dat
 }
 
 // Adding the Get user estimates from session route
-// @Summary Get the estimates of all users for all work packages
-// @Description Gets all estimates of all existing users of all existing work packages inside a existing session
+// @Summary Get the estimates of all users for all tasks
+// @Description Gets all estimates of all existing users of all existing tasks inside a existing session
 // @Tags estimate
 // @Produce  json
 // @Param token path string true "Session Token"
@@ -593,17 +593,17 @@ func addGetUserEstimatesFromSessionRoute(api fiber.Router, store datastore.DataS
 }
 
 // Adding the Get average user estimate from session route
-// @Summary Get the average estimate of all users for a specific work package
-// @Description Gets the average estimate of all existing users of a existing work package inside a existing session
+// @Summary Get the average estimate of all users for a specific task
+// @Description Gets the average estimate of all existing users of a existing task inside a existing session
 // @Tags estimate
 // @Produce  json
 // @Param token path string true "Session Token"
-// @Param id path string true "Work Package ID"
+// @Param id path string true "Task ID"
 // @Success 200 {object} CalcEstimate
 // @Failure 400 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /sessions/{token}/estimates/{id} [get]
-func addGetAverageEstimateForWorkPackageFromSessionRoute(api fiber.Router, store datastore.DataStore) {
+func addGetAverageEstimateForTaskFromSessionRoute(api fiber.Router, store datastore.DataStore) {
 	api.Get("/sessions/:token/estimates/:id", func(c *fiber.Ctx) error {
 
 		ests, e := store.GetEstimates(c.Params("token"))
@@ -616,7 +616,7 @@ func addGetAverageEstimateForWorkPackageFromSessionRoute(api fiber.Router, store
 			return c.Status(500).JSON(data)
 		}
 
-		ests, e = compute.ExtractEstimatesForWorkPackage(ests, c.Params("id"))
+		ests, e = compute.ExtractEstimatesForTask(ests, c.Params("id"))
 
 		if e != nil {
 			data := ErrorResponse{
@@ -672,17 +672,17 @@ func addGetAverageEstimateForWorkPackageFromSessionRoute(api fiber.Router, store
 }
 
 // Adding the Get max distance users for estimate from session route
-// @Summary Get the users with max distance between their estimates for a specific work package
-// @Description Gets the users with max distance in their estimates of a existing work package inside a existing session
+// @Summary Get the users with max distance between their estimates for a specific task
+// @Description Gets the users with max distance in their estimates of a existing task inside a existing session
 // @Tags estimate
 // @Produce  json
 // @Param token path string true "Session Token"
-// @Param id path string true "Work Package ID"
+// @Param id path string true "Task ID"
 // @Success 200 {object} UsersResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /sessions/{token}/estimates/{id}/users/distance [get]
-func addGetUserWithMaxEstimateDistanceForWorkPackageFromSessionRoute(api fiber.Router, store datastore.DataStore) {
+func addGetUserWithMaxEstimateDistanceForTaskFromSessionRoute(api fiber.Router, store datastore.DataStore) {
 	api.Get("/sessions/:token/estimates/:id/users/distance", func(c *fiber.Ctx) error {
 
 		ests, e := store.GetEstimates(c.Params("token"))
@@ -695,7 +695,7 @@ func addGetUserWithMaxEstimateDistanceForWorkPackageFromSessionRoute(api fiber.R
 			return c.Status(500).JSON(data)
 		}
 
-		ests, e = compute.ExtractEstimatesForWorkPackage(ests, c.Params("id"))
+		ests, e = compute.ExtractEstimatesForTask(ests, c.Params("id"))
 
 		if e != nil {
 			data := ErrorResponse{

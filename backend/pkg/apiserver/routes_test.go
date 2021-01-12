@@ -16,7 +16,7 @@ import (
 	"testing"
 )
 
-type workPackage struct {
+type task struct {
 	ID                string  `json:"id"`
 	Summary           string  `json:"summary"`
 	Effort            float64 `json:"effort"`
@@ -24,7 +24,7 @@ type workPackage struct {
 }
 
 type estimate struct {
-	WorkPackageID  string  `json:"workpackageid"`
+	TaskID         string  `json:"taskid"`
 	UserName       string  `json:"username"`
 	BestCase       float64 `json:"bestcase"`
 	MostLikelyCase float64 `json:"mostlikelycase"`
@@ -32,14 +32,14 @@ type estimate struct {
 }
 
 type apiResponse struct {
-	Message      string        `json:"message"`
-	Reason       string        `json:"reason"`
-	Route        string        `json:"route"`
-	Users        []string      `json:"users"`
-	Workpackages []workPackage `json:"workpackages"`
-	Estimates    []estimate    `json:"estimates"`
-	Hint         string        `json:"hint"`
-	Estimate     Estimate      `json:"estimate"`
+	Message   string     `json:"message"`
+	Reason    string     `json:"reason"`
+	Route     string     `json:"route"`
+	Users     []string   `json:"users"`
+	Tasks     []task     `json:"tasks"`
+	Estimates []estimate `json:"estimates"`
+	Hint      string     `json:"hint"`
+	Estimate  Estimate   `json:"estimate"`
 }
 
 var m *datastore.MockDatastore
@@ -420,11 +420,11 @@ func TestRemoveUserFromSessionSuccess(t *testing.T) {
 	assert.Equal(t, 200, res.StatusCode)
 }
 
-func TestGetWorkPackagesFromSessionFails(t *testing.T) {
+func TestGetTasksFromSessionFails(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
-	m.On("GetWorkPackages", "12345").Return([]datastore.WorkPackage{}, fmt.Errorf("Unable to retrieve work packages"))
+	m.On("GetTasks", "12345").Return([]datastore.Task{}, fmt.Errorf("Unable to retrieve tasks"))
 
 	app := NewServer(&Config{
 		Static: static{Prefix: "/public", Path: "../../static"},
@@ -432,7 +432,7 @@ func TestGetWorkPackagesFromSessionFails(t *testing.T) {
 
 	req, _ := http.NewRequest(
 		"GET",
-		"/api/sessions/12345/workpackages",
+		"/api/sessions/12345/tasks",
 		nil,
 	)
 
@@ -445,15 +445,15 @@ func TestGetWorkPackagesFromSessionFails(t *testing.T) {
 	err = decoder.Decode(&ar)
 	assert.NoError(t, err)
 	assert.Equal(t, "error", ar.Message)
-	assert.Equal(t, "Unable to retrieve work packages", ar.Reason)
+	assert.Equal(t, "Unable to retrieve tasks", ar.Reason)
 	assert.Equal(t, 500, res.StatusCode)
 }
 
-func TestGetWorkPackagesFromSessionSuccess(t *testing.T) {
+func TestGetTasksFromSessionSuccess(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
-	m.On("GetWorkPackages", "12345").Return([]datastore.WorkPackage{datastore.WorkPackage{ID: "TEST01"}}, nil)
+	m.On("GetTasks", "12345").Return([]datastore.Task{datastore.Task{ID: "TEST01"}}, nil)
 
 	app := NewServer(&Config{
 		Static: static{Prefix: "/public", Path: "../../static"},
@@ -461,7 +461,7 @@ func TestGetWorkPackagesFromSessionSuccess(t *testing.T) {
 
 	req, _ := http.NewRequest(
 		"GET",
-		"/api/sessions/12345/workpackages",
+		"/api/sessions/12345/tasks",
 		nil,
 	)
 
@@ -474,15 +474,15 @@ func TestGetWorkPackagesFromSessionSuccess(t *testing.T) {
 	err = decoder.Decode(&ar)
 	assert.NoError(t, err)
 	assert.Equal(t, "ok", ar.Message)
-	assert.Equal(t, "TEST01", ar.Workpackages[0].ID)
+	assert.Equal(t, "TEST01", ar.Tasks[0].ID)
 	assert.Equal(t, 200, res.StatusCode)
 }
 
-func TestAddWorkPackageToSessionFails(t *testing.T) {
+func TestAddTaskToSessionFails(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
-	m.On("AddWorkPackage", "12345", "TEST01", "eat honey").Return(fmt.Errorf("Unable to add work package"))
+	m.On("AddTask", "12345", "TEST01", "eat honey").Return(fmt.Errorf("Unable to add task"))
 
 	app := NewServer(&Config{
 		Static: static{Prefix: "/public", Path: "../../static"},
@@ -498,7 +498,7 @@ func TestAddWorkPackageToSessionFails(t *testing.T) {
 
 	req, _ := http.NewRequest(
 		"POST",
-		"/api/sessions/12345/workpackages",
+		"/api/sessions/12345/tasks",
 		bytes.NewBuffer(body),
 	)
 
@@ -513,15 +513,15 @@ func TestAddWorkPackageToSessionFails(t *testing.T) {
 	err = decoder.Decode(&ar)
 	assert.NoError(t, err)
 	assert.Equal(t, "error", ar.Message)
-	assert.Equal(t, "Unable to add work package", ar.Reason)
+	assert.Equal(t, "Unable to add task", ar.Reason)
 	assert.Equal(t, 500, res.StatusCode)
 }
 
-func TestAddWorkPackageToSessionFailsDueToMissingHeader(t *testing.T) {
+func TestAddTaskToSessionFailsDueToMissingHeader(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
-	m.On("AddWorkPackage", "12345", "TEST01", "eat honey").Return(fmt.Errorf("Unable to add work package"))
+	m.On("AddTask", "12345", "TEST01", "eat honey").Return(fmt.Errorf("Unable to add task"))
 
 	app := NewServer(&Config{
 		Static: static{Prefix: "/public", Path: "../../static"},
@@ -537,7 +537,7 @@ func TestAddWorkPackageToSessionFailsDueToMissingHeader(t *testing.T) {
 
 	req, _ := http.NewRequest(
 		"POST",
-		"/api/sessions/12345/workpackages",
+		"/api/sessions/12345/tasks",
 		bytes.NewBuffer(body),
 	)
 
@@ -554,11 +554,11 @@ func TestAddWorkPackageToSessionFailsDueToMissingHeader(t *testing.T) {
 	assert.Equal(t, 400, res.StatusCode)
 }
 
-func TestAddWorkPackageToSessionSuccess(t *testing.T) {
+func TestAddTaskToSessionSuccess(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
-	m.On("AddWorkPackage", "12345", "TEST01", "eat honey").Return(nil)
+	m.On("AddTask", "12345", "TEST01", "eat honey").Return(nil)
 
 	app := NewServer(&Config{
 		Static: static{Prefix: "/public", Path: "../../static"},
@@ -574,7 +574,7 @@ func TestAddWorkPackageToSessionSuccess(t *testing.T) {
 
 	req, _ := http.NewRequest(
 		"POST",
-		"/api/sessions/12345/workpackages",
+		"/api/sessions/12345/tasks",
 		bytes.NewBuffer(body),
 	)
 
@@ -589,15 +589,15 @@ func TestAddWorkPackageToSessionSuccess(t *testing.T) {
 	err = decoder.Decode(&ar)
 	assert.NoError(t, err)
 	assert.Equal(t, "ok", ar.Message)
-	assert.Equal(t, "/sessions/12345/workpackages/TEST01", ar.Route)
+	assert.Equal(t, "/sessions/12345/tasks/TEST01", ar.Route)
 	assert.Equal(t, 200, res.StatusCode)
 }
 
-func TestRemoveWorkPackageFromSessionFails(t *testing.T) {
+func TestRemoveTaskFromSessionFails(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
-	m.On("RemoveWorkPackage", "12345", "TEST01").Return(fmt.Errorf("Unable to remove work package from session"))
+	m.On("RemoveTask", "12345", "TEST01").Return(fmt.Errorf("Unable to remove task from session"))
 
 	app := NewServer(&Config{
 		Static: static{Prefix: "/public", Path: "../../static"},
@@ -605,7 +605,7 @@ func TestRemoveWorkPackageFromSessionFails(t *testing.T) {
 
 	req, _ := http.NewRequest(
 		"DELETE",
-		"/api/sessions/12345/workpackages/TEST01",
+		"/api/sessions/12345/tasks/TEST01",
 		nil,
 	)
 
@@ -618,15 +618,15 @@ func TestRemoveWorkPackageFromSessionFails(t *testing.T) {
 	err = decoder.Decode(&ar)
 	assert.NoError(t, err)
 	assert.Equal(t, "error", ar.Message)
-	assert.Equal(t, "Unable to remove work package from session", ar.Reason)
+	assert.Equal(t, "Unable to remove task from session", ar.Reason)
 	assert.Equal(t, 500, res.StatusCode)
 }
 
-func TestRemoveWorkPackageFromSessionSuccess(t *testing.T) {
+func TestRemoveTaskFromSessionSuccess(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
-	m.On("RemoveWorkPackage", "12345", "TEST01").Return(nil)
+	m.On("RemoveTask", "12345", "TEST01").Return(nil)
 
 	app := NewServer(&Config{
 		Static: static{Prefix: "/public", Path: "../../static"},
@@ -634,7 +634,7 @@ func TestRemoveWorkPackageFromSessionSuccess(t *testing.T) {
 
 	req, _ := http.NewRequest(
 		"DELETE",
-		"/api/sessions/12345/workpackages/TEST01",
+		"/api/sessions/12345/tasks/TEST01",
 		nil,
 	)
 
@@ -650,11 +650,11 @@ func TestRemoveWorkPackageFromSessionSuccess(t *testing.T) {
 	assert.Equal(t, 200, res.StatusCode)
 }
 
-func TestUpdateWorkPackageEstimateOfSessionFails(t *testing.T) {
+func TestUpdateTaskEstimateOfSessionFails(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
-	m.On("AddEstimateToWorkPackage", "12345", "TEST01", 1.2, 0.2).Return(fmt.Errorf("Unable to add estimate"))
+	m.On("AddEstimateToTask", "12345", "TEST01", 1.2, 0.2).Return(fmt.Errorf("Unable to add estimate"))
 
 	app := NewServer(&Config{
 		Static: static{Prefix: "/public", Path: "../../static"},
@@ -670,7 +670,7 @@ func TestUpdateWorkPackageEstimateOfSessionFails(t *testing.T) {
 
 	req, _ := http.NewRequest(
 		"PUT",
-		"/api/sessions/12345/workpackages/TEST01",
+		"/api/sessions/12345/tasks/TEST01",
 		bytes.NewBuffer(body),
 	)
 
@@ -689,7 +689,7 @@ func TestUpdateWorkPackageEstimateOfSessionFails(t *testing.T) {
 	assert.Equal(t, 500, res.StatusCode)
 }
 
-func TestUpdateWorkPackageEstimateOfSessionFailsDueToMissingHeader(t *testing.T) {
+func TestUpdateTaskEstimateOfSessionFailsDueToMissingHeader(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
@@ -707,7 +707,7 @@ func TestUpdateWorkPackageEstimateOfSessionFailsDueToMissingHeader(t *testing.T)
 
 	req, _ := http.NewRequest(
 		"PUT",
-		"/api/sessions/12345/workpackages/TEST01",
+		"/api/sessions/12345/tasks/TEST01",
 		bytes.NewBuffer(body),
 	)
 
@@ -724,11 +724,11 @@ func TestUpdateWorkPackageEstimateOfSessionFailsDueToMissingHeader(t *testing.T)
 	assert.Equal(t, 400, res.StatusCode)
 }
 
-func TestUpdateWorkPackageEstimateOfSessionSuccess(t *testing.T) {
+func TestUpdateTaskEstimateOfSessionSuccess(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
-	m.On("AddEstimateToWorkPackage", "12345", "TEST01", 1.2, 0.2).Return(nil)
+	m.On("AddEstimateToTask", "12345", "TEST01", 1.2, 0.2).Return(nil)
 
 	app := NewServer(&Config{
 		Static: static{Prefix: "/public", Path: "../../static"},
@@ -744,7 +744,7 @@ func TestUpdateWorkPackageEstimateOfSessionSuccess(t *testing.T) {
 
 	req, _ := http.NewRequest(
 		"PUT",
-		"/api/sessions/12345/workpackages/TEST01",
+		"/api/sessions/12345/tasks/TEST01",
 		bytes.NewBuffer(body),
 	)
 
@@ -762,11 +762,11 @@ func TestUpdateWorkPackageEstimateOfSessionSuccess(t *testing.T) {
 	assert.Equal(t, 200, res.StatusCode)
 }
 
-func TestResetEstimateOfWorkPackageFails(t *testing.T) {
+func TestResetEstimateOfTaskFails(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
-	m.On("RemoveEstimateFromWorkPackage", "12345", "TEST01").Return(fmt.Errorf("Unable to reset estimate"))
+	m.On("RemoveEstimateFromTask", "12345", "TEST01").Return(fmt.Errorf("Unable to reset estimate"))
 
 	app := NewServer(&Config{
 		Static: static{Prefix: "/public", Path: "../../static"},
@@ -774,7 +774,7 @@ func TestResetEstimateOfWorkPackageFails(t *testing.T) {
 
 	req, _ := http.NewRequest(
 		"DELETE",
-		"/api/sessions/12345/workpackages/TEST01/estimate",
+		"/api/sessions/12345/tasks/TEST01/estimate",
 		nil,
 	)
 
@@ -791,11 +791,11 @@ func TestResetEstimateOfWorkPackageFails(t *testing.T) {
 	assert.Equal(t, 500, res.StatusCode)
 }
 
-func TestResetEstimateOfWorkPackageSuccess(t *testing.T) {
+func TestResetEstimateOfTaskSuccess(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
-	m.On("RemoveEstimateFromWorkPackage", "12345", "TEST01").Return(nil)
+	m.On("RemoveEstimateFromTask", "12345", "TEST01").Return(nil)
 
 	app := NewServer(&Config{
 		Static: static{Prefix: "/public", Path: "../../static"},
@@ -803,7 +803,7 @@ func TestResetEstimateOfWorkPackageSuccess(t *testing.T) {
 
 	req, _ := http.NewRequest(
 		"DELETE",
-		"/api/sessions/12345/workpackages/TEST01/estimate",
+		"/api/sessions/12345/tasks/TEST01/estimate",
 		nil,
 	)
 
@@ -824,7 +824,7 @@ func TestAddUserEstimateToSessionFails(t *testing.T) {
 	defer setupAndTearDown(t)
 
 	m.On("AddEstimate", "12345", datastore.Estimate{
-		WorkPackageID:  "TEST01",
+		TaskID:         "TEST01",
 		UserName:       "Tigger",
 		BestCase:       0.5,
 		MostLikelyCase: 1.5,
@@ -909,7 +909,7 @@ func TestAddUserEstimateToSessionSuccess(t *testing.T) {
 	defer setupAndTearDown(t)
 
 	m.On("AddEstimate", "12345", datastore.Estimate{
-		WorkPackageID:  "TEST01",
+		TaskID:         "TEST01",
 		UserName:       "Tigger",
 		BestCase:       0.5,
 		MostLikelyCase: 1.5,
@@ -956,8 +956,8 @@ func TestRemoveUserEstimateFromSessionFails(t *testing.T) {
 	defer setupAndTearDown(t)
 
 	m.On("RemoveEstimate", "12345", datastore.Estimate{
-		WorkPackageID: "TEST01",
-		UserName:      "Tigger"}).Return(fmt.Errorf("Unable to remove estimate"))
+		TaskID:   "TEST01",
+		UserName: "Tigger"}).Return(fmt.Errorf("Unable to remove estimate"))
 
 	app := NewServer(&Config{
 		Static: static{Prefix: "/public", Path: "../../static"},
@@ -987,8 +987,8 @@ func TestRemoveUserEstimateFromSessionSuccess(t *testing.T) {
 	defer setupAndTearDown(t)
 
 	m.On("RemoveEstimate", "12345", datastore.Estimate{
-		WorkPackageID: "TEST01",
-		UserName:      "Tigger"}).Return(nil)
+		TaskID:   "TEST01",
+		UserName: "Tigger"}).Return(nil)
 
 	app := NewServer(&Config{
 		Static: static{Prefix: "/public", Path: "../../static"},
@@ -1045,7 +1045,7 @@ func TestGetUserEstimatesFromSessionSuccess(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
-	m.On("GetEstimates", "12345").Return([]datastore.Estimate{datastore.Estimate{WorkPackageID: "TEST01"}}, nil)
+	m.On("GetEstimates", "12345").Return([]datastore.Estimate{datastore.Estimate{TaskID: "TEST01"}}, nil)
 
 	app := NewServer(&Config{
 		Static: static{Prefix: "/public", Path: "../../static"},
@@ -1066,11 +1066,11 @@ func TestGetUserEstimatesFromSessionSuccess(t *testing.T) {
 	err = decoder.Decode(&ar)
 	assert.NoError(t, err)
 	assert.Equal(t, "ok", ar.Message)
-	assert.Equal(t, "TEST01", ar.Estimates[0].WorkPackageID)
+	assert.Equal(t, "TEST01", ar.Estimates[0].TaskID)
 	assert.Equal(t, 200, res.StatusCode)
 }
 
-func TestGetAverageEstimateForWorkPackageFromSessionFailsDueToErrorOnGetEstimates(t *testing.T) {
+func TestGetAverageEstimateForTaskFromSessionFailsDueToErrorOnGetEstimates(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
@@ -1099,7 +1099,7 @@ func TestGetAverageEstimateForWorkPackageFromSessionFailsDueToErrorOnGetEstimate
 	assert.Equal(t, 500, res.StatusCode)
 }
 
-func TestGetAverageEstimateForWorkPackageFromSessionFailsDueToNoEstimates(t *testing.T) {
+func TestGetAverageEstimateForTaskFromSessionFailsDueToNoEstimates(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
@@ -1127,13 +1127,13 @@ func TestGetAverageEstimateForWorkPackageFromSessionFailsDueToNoEstimates(t *tes
 	assert.Equal(t, "Not enough data to process", ar.Reason)
 	assert.Equal(t, 500, res.StatusCode)
 }
-func TestGetAverageEstimateForWorkPackageFromSessionFailsDueToErrorOnGetUsers(t *testing.T) {
+func TestGetAverageEstimateForTaskFromSessionFailsDueToErrorOnGetUsers(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
 	m.On("GetEstimates", "12345").Return([]datastore.Estimate{datastore.Estimate{
-		WorkPackageID: "TEST01",
-		UserName:      "Tigger",
+		TaskID:   "TEST01",
+		UserName: "Tigger",
 	}}, nil)
 
 	m.On("GetUsers", "12345").Return([]string{}, fmt.Errorf("Unable to retrieve users"))
@@ -1161,12 +1161,12 @@ func TestGetAverageEstimateForWorkPackageFromSessionFailsDueToErrorOnGetUsers(t 
 	assert.Equal(t, 500, res.StatusCode)
 }
 
-func TestGetAverageEstimateForWorkPackageFromSessionFailsDueToInvalidEstimate(t *testing.T) {
+func TestGetAverageEstimateForTaskFromSessionFailsDueToInvalidEstimate(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
 	m.On("GetEstimates", "12345").Return([]datastore.Estimate{datastore.Estimate{
-		WorkPackageID:  "TEST01",
+		TaskID:         "TEST01",
 		UserName:       "Tigger",
 		BestCase:       0.5,
 		MostLikelyCase: 0.2,
@@ -1198,19 +1198,19 @@ func TestGetAverageEstimateForWorkPackageFromSessionFailsDueToInvalidEstimate(t 
 	assert.Equal(t, 500, res.StatusCode)
 }
 
-func TestGetAverageEstimateForWorkPackageFromSessionSuccessWithAllUsersProvidedEstimates(t *testing.T) {
+func TestGetAverageEstimateForTaskFromSessionSuccessWithAllUsersProvidedEstimates(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
 	m.On("GetEstimates", "12345").Return([]datastore.Estimate{datastore.Estimate{
-		WorkPackageID:  "TEST01",
+		TaskID:         "TEST01",
 		UserName:       "Tigger",
 		BestCase:       1.0,
 		MostLikelyCase: 2.0,
 		WorstCase:      4.0,
 	},
 		{
-			WorkPackageID:  "TEST01",
+			TaskID:         "TEST01",
 			UserName:       "Rabbit",
 			BestCase:       2.0,
 			MostLikelyCase: 3.0,
@@ -1245,19 +1245,19 @@ func TestGetAverageEstimateForWorkPackageFromSessionSuccessWithAllUsersProvidedE
 	assert.Equal(t, 200, res.StatusCode)
 }
 
-func TestGetAverageEstimateForWorkPackageFromSessionSuccessWithNotAllUsersProvidedEstimates(t *testing.T) {
+func TestGetAverageEstimateForTaskFromSessionSuccessWithNotAllUsersProvidedEstimates(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
 	m.On("GetEstimates", "12345").Return([]datastore.Estimate{datastore.Estimate{
-		WorkPackageID:  "TEST01",
+		TaskID:         "TEST01",
 		UserName:       "Tigger",
 		BestCase:       1.0,
 		MostLikelyCase: 2.0,
 		WorstCase:      4.0,
 	},
 		{
-			WorkPackageID:  "TEST01",
+			TaskID:         "TEST01",
 			UserName:       "Rabbit",
 			BestCase:       2.0,
 			MostLikelyCase: 3.0,
@@ -1293,7 +1293,7 @@ func TestGetAverageEstimateForWorkPackageFromSessionSuccessWithNotAllUsersProvid
 	assert.Equal(t, 200, res.StatusCode)
 }
 
-func TestGetUserWithMaxEstimateDistanceForWorkPackageFromSessionFailsDueToErrorOnGetEstimates(t *testing.T) {
+func TestGetUserWithMaxEstimateDistanceForTaskFromSessionFailsDueToErrorOnGetEstimates(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
@@ -1322,7 +1322,7 @@ func TestGetUserWithMaxEstimateDistanceForWorkPackageFromSessionFailsDueToErrorO
 	assert.Equal(t, 500, res.StatusCode)
 }
 
-func TestGetUserWithMaxEstimateDistanceForWorkPackageFromSessionFailsDueToNoEstimates(t *testing.T) {
+func TestGetUserWithMaxEstimateDistanceForTaskFromSessionFailsDueToNoEstimates(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
@@ -1351,12 +1351,12 @@ func TestGetUserWithMaxEstimateDistanceForWorkPackageFromSessionFailsDueToNoEsti
 	assert.Equal(t, 500, res.StatusCode)
 }
 
-func TestGetUserWithMaxEstimateDistanceForWorkPackageFromSessionFailsDueToInvalidEstimate(t *testing.T) {
+func TestGetUserWithMaxEstimateDistanceForTaskFromSessionFailsDueToInvalidEstimate(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
 	m.On("GetEstimates", "12345").Return([]datastore.Estimate{datastore.Estimate{
-		WorkPackageID:  "TEST01",
+		TaskID:         "TEST01",
 		UserName:       "Tigger",
 		BestCase:       0.5,
 		MostLikelyCase: 0.2,
@@ -1388,26 +1388,26 @@ func TestGetUserWithMaxEstimateDistanceForWorkPackageFromSessionFailsDueToInvali
 	assert.Equal(t, 500, res.StatusCode)
 }
 
-func TestGetUserWithMaxEstimateDistanceForWorkPackageFromSessionSuccess(t *testing.T) {
+func TestGetUserWithMaxEstimateDistanceForTaskFromSessionSuccess(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
 	m.On("GetEstimates", "12345").Return([]datastore.Estimate{datastore.Estimate{
-		WorkPackageID:  "TEST01",
+		TaskID:         "TEST01",
 		UserName:       "Tigger",
 		BestCase:       1.0,
 		MostLikelyCase: 2.0,
 		WorstCase:      4.0,
 	},
 		{
-			WorkPackageID:  "TEST01",
+			TaskID:         "TEST01",
 			UserName:       "Rabbit",
 			BestCase:       2.0,
 			MostLikelyCase: 3.0,
 			WorstCase:      5.0,
 		},
 		{
-			WorkPackageID:  "TEST01",
+			TaskID:         "TEST01",
 			UserName:       "Piglet",
 			BestCase:       5.0,
 			MostLikelyCase: 6.0,
@@ -1474,7 +1474,7 @@ func TestSmokeWithRealDB(t *testing.T) {
 
 	req, _ = http.NewRequest(
 		"POST",
-		"/api/sessions/"+token+"/workpackages",
+		"/api/sessions/"+token+"/tasks",
 		bytes.NewBuffer(body),
 	)
 	req.Header.Set("Content-Type", "application/json")
@@ -1498,7 +1498,7 @@ func TestSmokeWithRealDB(t *testing.T) {
 
 	req, _ = http.NewRequest(
 		"POST",
-		"/api/sessions/"+token+"/workpackages",
+		"/api/sessions/"+token+"/tasks",
 		bytes.NewBuffer(body),
 	)
 	req.Header.Set("Content-Type", "application/json")
@@ -1653,14 +1653,14 @@ func TestSmokeWithRealDB(t *testing.T) {
 	err = decoder.Decode(&ar)
 	assert.NoError(t, err)
 	assert.Equal(t, "ok", ar.Message)
-	assert.Equal(t, "TEST01", ar.Estimates[0].WorkPackageID)
+	assert.Equal(t, "TEST01", ar.Estimates[0].TaskID)
 	assert.Equal(t, "Tigger", ar.Estimates[0].UserName)
 	assert.Equal(t, 0.5, ar.Estimates[0].BestCase)
 	assert.Equal(t, 1.0, ar.Estimates[0].MostLikelyCase)
 	assert.Equal(t, 2.0, ar.Estimates[0].WorstCase)
-	assert.Equal(t, "TEST02", ar.Estimates[1].WorkPackageID)
+	assert.Equal(t, "TEST02", ar.Estimates[1].TaskID)
 	assert.Equal(t, "Tigger", ar.Estimates[1].UserName)
-	assert.Equal(t, "TEST01", ar.Estimates[2].WorkPackageID)
+	assert.Equal(t, "TEST01", ar.Estimates[2].TaskID)
 	assert.Equal(t, "Rabbit", ar.Estimates[2].UserName)
 	assert.Len(t, ar.Estimates, 3)
 
@@ -1693,12 +1693,12 @@ func TestSmokeWithRealDB(t *testing.T) {
 	err = decoder.Decode(&ar)
 	assert.NoError(t, err)
 	assert.Equal(t, "ok", ar.Message)
-	assert.Equal(t, "TEST01", ar.Estimates[0].WorkPackageID)
+	assert.Equal(t, "TEST01", ar.Estimates[0].TaskID)
 	assert.Equal(t, "Tigger", ar.Estimates[0].UserName)
 	assert.Equal(t, 0.5, ar.Estimates[0].BestCase)
 	assert.Equal(t, 1.0, ar.Estimates[0].MostLikelyCase)
 	assert.Equal(t, 2.0, ar.Estimates[0].WorstCase)
-	assert.Equal(t, "TEST02", ar.Estimates[1].WorkPackageID)
+	assert.Equal(t, "TEST02", ar.Estimates[1].TaskID)
 	assert.Equal(t, "Tigger", ar.Estimates[1].UserName)
 	assert.Len(t, ar.Estimates, 2)
 }

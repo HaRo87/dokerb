@@ -33,26 +33,26 @@ func (m *MockDatastore) RemoveSession(t string) error {
 	return arguments.Error(0)
 }
 
-// AddWorkPackage implements the Datastore interface
-func (m *MockDatastore) AddWorkPackage(t, id, s string) error {
+// AddTask implements the Datastore interface
+func (m *MockDatastore) AddTask(t, id, s string) error {
 	arguments := m.Called(t, id, s)
 	return arguments.Error(0)
 }
 
-// RemoveWorkPackage implements the Datastore interface
-func (m *MockDatastore) RemoveWorkPackage(t, id string) error {
+// RemoveTask implements the Datastore interface
+func (m *MockDatastore) RemoveTask(t, id string) error {
 	arguments := m.Called(t, id)
 	return arguments.Error(0)
 }
 
-// AddEstimateToWorkPackage implements the Datastore interface
-func (m *MockDatastore) AddEstimateToWorkPackage(t, id string, e, s float64) error {
+// AddEstimateToTask implements the Datastore interface
+func (m *MockDatastore) AddEstimateToTask(t, id string, e, s float64) error {
 	arguments := m.Called(t, id, e, s)
 	return arguments.Error(0)
 }
 
-// RemoveEstimateFromWorkPackage implements the Datastore interface
-func (m *MockDatastore) RemoveEstimateFromWorkPackage(t, id string) error {
+// RemoveEstimateFromTask implements the Datastore interface
+func (m *MockDatastore) RemoveEstimateFromTask(t, id string) error {
 	arguments := m.Called(t, id)
 	return arguments.Error(0)
 }
@@ -63,10 +63,10 @@ func (m *MockDatastore) GetUsers(t string) ([]string, error) {
 	return arguments.Get(0).([]string), arguments.Error(1)
 }
 
-// GetWorkPackages implements the Datastore interface
-func (m *MockDatastore) GetWorkPackages(t string) ([]WorkPackage, error) {
+// GetTasks implements the Datastore interface
+func (m *MockDatastore) GetTasks(t string) ([]Task, error) {
 	arguments := m.Called(t)
-	return arguments.Get(0).([]WorkPackage), arguments.Error(1)
+	return arguments.Get(0).([]Task), arguments.Error(1)
 }
 
 // AddEstimate implements the Datastore interface
