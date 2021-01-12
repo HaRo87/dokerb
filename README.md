@@ -26,7 +26,7 @@ but using the [Delphi Method](https://en.wikipedia.org/wiki/Delphi_method) for e
 * [Create Go App](https://create-go.app/)
 * [fiber-swagger](https://github.com/arsmn/fiber-swagger)
 
-4. Run project by this command from within the `backend` dir:
+4. Run project by this command:
 
 ```bash
 task -s
@@ -97,11 +97,20 @@ static:
 In case you want to run DokerB in a Docker container you can use the 
 Dockerfile located inside the `backend` directory. 
 
-Just run:
+There are also two tasks specified in the taskfile. You can run:
 
 ```bash
-docker build -t dokerb .
+task docker-build
 ```
+
+for building the Docker image and:
+
+```bash
+task docker-run
+```
+
+for running the Docker container, assuming you did not change the default config it will
+expose the correct port.
 
 ## ⚠️ License
 
