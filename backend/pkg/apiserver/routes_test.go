@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/genjidb/genji"
+	"github.com/gofiber/fiber/v2"
 	"github.com/haro87/dokerb/pkg/datastore"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
@@ -40,6 +41,7 @@ type apiResponse struct {
 	Estimates []estimate `json:"estimates"`
 	Hint      string     `json:"hint"`
 	Estimate  Estimate   `json:"estimate"`
+	Token     string     `json:""token`
 }
 
 var m *datastore.MockDatastore
@@ -47,6 +49,8 @@ var ds datastore.DataStore
 var db *genji.DB
 var td string
 var tre *regexp.Regexp
+var jwtoken string
+var app *fiber.App
 
 const float64CompareThreshold = 0.001
 
@@ -55,8 +59,14 @@ func setupTestCaseForRealDatastore(t *testing.T) func(t *testing.T) {
 	db, _ = genji.Open(td + "/my.db")
 	db = db.WithContext(context.Background())
 	ds, _ = datastore.NewGenjiDatastore(db)
-	tre, _ = regexp.Compile("/sessions/([\\d|\\w]*)")
 
+	app = NewServer(&Config{
+		Authentication: auth{Type: "simple-auth", SingingKey: "TEST1234"},
+		Static:         static{Prefix: "/public", Path: "../../static"},
+		SimpleAuth:     authSimple{User: "Tigger", Password: "JUMP1234"},
+	}, ds).Start()
+
+	tre, _ = regexp.Compile("/sessions/([\\d|\\w]*)")
 	return func(t *testing.T) {
 		db.Close()
 		os.RemoveAll(td)
@@ -67,10 +77,44 @@ func setupTestCaseForRealDatastore(t *testing.T) func(t *testing.T) {
 
 func setupTestCaseForMock(t *testing.T) func(t *testing.T) {
 	tre, _ = regexp.Compile("/sessions/([\\d|\\w]*)")
-
 	m = new(datastore.MockDatastore)
+	app = NewServer(&Config{
+		Authentication: auth{Type: "simple-auth", SingingKey: "TEST1234"},
+		Static:         static{Prefix: "/public", Path: "../../static"},
+		SimpleAuth:     authSimple{User: "Tigger", Password: "JUMP1234"},
+	}, m).Start()
 	return func(t *testing.T) {
 		m = nil
+		app = nil
+	}
+}
+
+func setupTestCaseForAuth(t *testing.T) func(t *testing.T) {
+	payloadf := map[string]interface{}{
+		"user":     "Tigger",
+		"password": "JUMP1234",
+	}
+	body, me := json.Marshal(payloadf)
+
+	assert.NoError(t, me)
+
+	req, _ := http.NewRequest(
+		"POST",
+		"/api/login",
+		bytes.NewBuffer(body),
+	)
+
+	req.Header.Set("Content-Type", "application/json")
+
+	res, _ := app.Test(req, -1)
+
+	var ar apiResponse
+	decoder := json.NewDecoder(res.Body)
+	decoder.Decode(&ar)
+	jwtoken = ar.Token
+
+	return func(t *testing.T) {
+		jwtoken = ""
 	}
 }
 
@@ -78,17 +122,18 @@ func TestCreateSessionFails(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
-	m.On("CreateSession").Return("", fmt.Errorf("Unable to create session"))
+	setupAndTearDownForAuth := setupTestCaseForAuth(t)
+	defer setupAndTearDownForAuth(t)
 
-	app := NewServer(&Config{
-		Static: static{Prefix: "/public", Path: "../../static"},
-	}, m).Start()
+	m.On("CreateSession").Return("", fmt.Errorf("Unable to create session"))
 
 	req, _ := http.NewRequest(
 		"POST",
 		"/api/sessions",
 		nil,
 	)
+
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 
 	res, err := app.Test(req, -1)
 
@@ -108,17 +153,18 @@ func TestCreateSessionSuccess(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
-	m.On("CreateSession").Return("12345678901234567890abd456789012", nil)
+	setupAndTearDownForAuth := setupTestCaseForAuth(t)
+	defer setupAndTearDownForAuth(t)
 
-	app := NewServer(&Config{
-		Static: static{Prefix: "/public", Path: "../../static"},
-	}, m).Start()
+	m.On("CreateSession").Return("12345678901234567890abd456789012", nil)
 
 	req, _ := http.NewRequest(
 		"POST",
 		"/api/sessions",
 		nil,
 	)
+
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 
 	res, err := app.Test(req, -1)
 
@@ -140,17 +186,18 @@ func TestDeleteSessionFails(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
-	m.On("RemoveSession", "12345").Return(fmt.Errorf("Unable to remove session"))
+	setupAndTearDownForAuth := setupTestCaseForAuth(t)
+	defer setupAndTearDownForAuth(t)
 
-	app := NewServer(&Config{
-		Static: static{Prefix: "/public", Path: "../../static"},
-	}, m).Start()
+	m.On("RemoveSession", "12345").Return(fmt.Errorf("Unable to remove session"))
 
 	req, _ := http.NewRequest(
 		"DELETE",
 		"/api/sessions/12345",
 		nil,
 	)
+
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 
 	res, err := app.Test(req, -1)
 
@@ -170,17 +217,18 @@ func TestDeleteSessionSuccess(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
-	m.On("RemoveSession", "12345").Return(nil)
+	setupAndTearDownForAuth := setupTestCaseForAuth(t)
+	defer setupAndTearDownForAuth(t)
 
-	app := NewServer(&Config{
-		Static: static{Prefix: "/public", Path: "../../static"},
-	}, m).Start()
+	m.On("RemoveSession", "12345").Return(nil)
 
 	req, _ := http.NewRequest(
 		"DELETE",
 		"/api/sessions/12345",
 		nil,
 	)
+
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 
 	res, err := app.Test(req, -1)
 
@@ -199,11 +247,10 @@ func TestAddUserToSessionFails(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
-	m.On("JoinSession", "12345", "Tigger").Return(fmt.Errorf("Unable to add user"))
+	setupAndTearDownForAuth := setupTestCaseForAuth(t)
+	defer setupAndTearDownForAuth(t)
 
-	app := NewServer(&Config{
-		Static: static{Prefix: "/public", Path: "../../static"},
-	}, m).Start()
+	m.On("JoinSession", "12345", "Tigger").Return(fmt.Errorf("Unable to add user"))
 
 	payloadf := map[string]interface{}{
 		"name": "Tigger",
@@ -218,6 +265,7 @@ func TestAddUserToSessionFails(t *testing.T) {
 		bytes.NewBuffer(body),
 	)
 
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 	req.Header.Set("Content-Type", "application/json")
 
 	res, err := app.Test(req, -1)
@@ -237,9 +285,8 @@ func TestAddUserToSessionFailsDueToMissingHeader(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
-	app := NewServer(&Config{
-		Static: static{Prefix: "/public", Path: "../../static"},
-	}, m).Start()
+	setupAndTearDownForAuth := setupTestCaseForAuth(t)
+	defer setupAndTearDownForAuth(t)
 
 	payloadf := map[string]interface{}{
 		"name": "Tigger",
@@ -253,6 +300,8 @@ func TestAddUserToSessionFailsDueToMissingHeader(t *testing.T) {
 		"/api/sessions/12345/users",
 		bytes.NewBuffer(body),
 	)
+
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 
 	res, err := app.Test(req, -1)
 
@@ -271,11 +320,10 @@ func TestAddUserToSessionSuccess(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
-	m.On("JoinSession", "12345", "Tigger").Return(nil)
+	setupAndTearDownForAuth := setupTestCaseForAuth(t)
+	defer setupAndTearDownForAuth(t)
 
-	app := NewServer(&Config{
-		Static: static{Prefix: "/public", Path: "../../static"},
-	}, m).Start()
+	m.On("JoinSession", "12345", "Tigger").Return(nil)
 
 	payloadf := map[string]interface{}{
 		"name": "Tigger",
@@ -290,6 +338,7 @@ func TestAddUserToSessionSuccess(t *testing.T) {
 		bytes.NewBuffer(body),
 	)
 
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 	req.Header.Set("Content-Type", "application/json")
 
 	res, err := app.Test(req, -1)
@@ -309,17 +358,18 @@ func TestGetUsersFromSessionFails(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
-	m.On("GetUsers", "12345").Return([]string{}, fmt.Errorf("Unable to retrieve users"))
+	setupAndTearDownForAuth := setupTestCaseForAuth(t)
+	defer setupAndTearDownForAuth(t)
 
-	app := NewServer(&Config{
-		Static: static{Prefix: "/public", Path: "../../static"},
-	}, m).Start()
+	m.On("GetUsers", "12345").Return([]string{}, fmt.Errorf("Unable to retrieve users"))
 
 	req, _ := http.NewRequest(
 		"GET",
 		"/api/sessions/12345/users",
 		nil,
 	)
+
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 
 	res, err := app.Test(req, -1)
 
@@ -338,17 +388,18 @@ func TestGetUsersFromSessionSuccess(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
-	m.On("GetUsers", "12345").Return([]string{"Tigger", "Rabbit"}, nil)
+	setupAndTearDownForAuth := setupTestCaseForAuth(t)
+	defer setupAndTearDownForAuth(t)
 
-	app := NewServer(&Config{
-		Static: static{Prefix: "/public", Path: "../../static"},
-	}, m).Start()
+	m.On("GetUsers", "12345").Return([]string{"Tigger", "Rabbit"}, nil)
 
 	req, _ := http.NewRequest(
 		"GET",
 		"/api/sessions/12345/users",
 		nil,
 	)
+
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 
 	res, err := app.Test(req, -1)
 
@@ -367,17 +418,18 @@ func TestRemoveUserFromSessionFails(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
-	m.On("LeaveSession", "12345", "Tigger").Return(fmt.Errorf("Unable to remove user from session"))
+	setupAndTearDownForAuth := setupTestCaseForAuth(t)
+	defer setupAndTearDownForAuth(t)
 
-	app := NewServer(&Config{
-		Static: static{Prefix: "/public", Path: "../../static"},
-	}, m).Start()
+	m.On("LeaveSession", "12345", "Tigger").Return(fmt.Errorf("Unable to remove user from session"))
 
 	req, _ := http.NewRequest(
 		"DELETE",
 		"/api/sessions/12345/users/Tigger",
 		nil,
 	)
+
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 
 	res, err := app.Test(req, -1)
 
@@ -396,17 +448,18 @@ func TestRemoveUserFromSessionSuccess(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
-	m.On("LeaveSession", "12345", "Tigger").Return(nil)
+	setupAndTearDownForAuth := setupTestCaseForAuth(t)
+	defer setupAndTearDownForAuth(t)
 
-	app := NewServer(&Config{
-		Static: static{Prefix: "/public", Path: "../../static"},
-	}, m).Start()
+	m.On("LeaveSession", "12345", "Tigger").Return(nil)
 
 	req, _ := http.NewRequest(
 		"DELETE",
 		"/api/sessions/12345/users/Tigger",
 		nil,
 	)
+
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 
 	res, err := app.Test(req, -1)
 
@@ -424,17 +477,18 @@ func TestGetTasksFromSessionFails(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
-	m.On("GetTasks", "12345").Return([]datastore.Task{}, fmt.Errorf("Unable to retrieve tasks"))
+	setupAndTearDownForAuth := setupTestCaseForAuth(t)
+	defer setupAndTearDownForAuth(t)
 
-	app := NewServer(&Config{
-		Static: static{Prefix: "/public", Path: "../../static"},
-	}, m).Start()
+	m.On("GetTasks", "12345").Return([]datastore.Task{}, fmt.Errorf("Unable to retrieve tasks"))
 
 	req, _ := http.NewRequest(
 		"GET",
 		"/api/sessions/12345/tasks",
 		nil,
 	)
+
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 
 	res, err := app.Test(req, -1)
 
@@ -453,17 +507,18 @@ func TestGetTasksFromSessionSuccess(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
-	m.On("GetTasks", "12345").Return([]datastore.Task{datastore.Task{ID: "TEST01"}}, nil)
+	setupAndTearDownForAuth := setupTestCaseForAuth(t)
+	defer setupAndTearDownForAuth(t)
 
-	app := NewServer(&Config{
-		Static: static{Prefix: "/public", Path: "../../static"},
-	}, m).Start()
+	m.On("GetTasks", "12345").Return([]datastore.Task{datastore.Task{ID: "TEST01"}}, nil)
 
 	req, _ := http.NewRequest(
 		"GET",
 		"/api/sessions/12345/tasks",
 		nil,
 	)
+
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 
 	res, err := app.Test(req, -1)
 
@@ -482,11 +537,10 @@ func TestAddTaskToSessionFails(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
-	m.On("AddTask", "12345", "TEST01", "eat honey").Return(fmt.Errorf("Unable to add task"))
+	setupAndTearDownForAuth := setupTestCaseForAuth(t)
+	defer setupAndTearDownForAuth(t)
 
-	app := NewServer(&Config{
-		Static: static{Prefix: "/public", Path: "../../static"},
-	}, m).Start()
+	m.On("AddTask", "12345", "TEST01", "eat honey").Return(fmt.Errorf("Unable to add task"))
 
 	payloadf := map[string]interface{}{
 		"id":      "TEST01",
@@ -502,6 +556,7 @@ func TestAddTaskToSessionFails(t *testing.T) {
 		bytes.NewBuffer(body),
 	)
 
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 	req.Header.Set("Content-Type", "application/json")
 
 	res, err := app.Test(req, -1)
@@ -521,11 +576,10 @@ func TestAddTaskToSessionFailsDueToMissingHeader(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
-	m.On("AddTask", "12345", "TEST01", "eat honey").Return(fmt.Errorf("Unable to add task"))
+	setupAndTearDownForAuth := setupTestCaseForAuth(t)
+	defer setupAndTearDownForAuth(t)
 
-	app := NewServer(&Config{
-		Static: static{Prefix: "/public", Path: "../../static"},
-	}, m).Start()
+	m.On("AddTask", "12345", "TEST01", "eat honey").Return(fmt.Errorf("Unable to add task"))
 
 	payloadf := map[string]interface{}{
 		"id":      "TEST01",
@@ -540,6 +594,8 @@ func TestAddTaskToSessionFailsDueToMissingHeader(t *testing.T) {
 		"/api/sessions/12345/tasks",
 		bytes.NewBuffer(body),
 	)
+
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 
 	res, err := app.Test(req, -1)
 
@@ -558,11 +614,10 @@ func TestAddTaskToSessionSuccess(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
-	m.On("AddTask", "12345", "TEST01", "eat honey").Return(nil)
+	setupAndTearDownForAuth := setupTestCaseForAuth(t)
+	defer setupAndTearDownForAuth(t)
 
-	app := NewServer(&Config{
-		Static: static{Prefix: "/public", Path: "../../static"},
-	}, m).Start()
+	m.On("AddTask", "12345", "TEST01", "eat honey").Return(nil)
 
 	payloadf := map[string]interface{}{
 		"id":      "TEST01",
@@ -578,6 +633,7 @@ func TestAddTaskToSessionSuccess(t *testing.T) {
 		bytes.NewBuffer(body),
 	)
 
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 	req.Header.Set("Content-Type", "application/json")
 
 	res, err := app.Test(req, -1)
@@ -597,17 +653,18 @@ func TestRemoveTaskFromSessionFails(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
-	m.On("RemoveTask", "12345", "TEST01").Return(fmt.Errorf("Unable to remove task from session"))
+	setupAndTearDownForAuth := setupTestCaseForAuth(t)
+	defer setupAndTearDownForAuth(t)
 
-	app := NewServer(&Config{
-		Static: static{Prefix: "/public", Path: "../../static"},
-	}, m).Start()
+	m.On("RemoveTask", "12345", "TEST01").Return(fmt.Errorf("Unable to remove task from session"))
 
 	req, _ := http.NewRequest(
 		"DELETE",
 		"/api/sessions/12345/tasks/TEST01",
 		nil,
 	)
+
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 
 	res, err := app.Test(req, -1)
 
@@ -626,17 +683,18 @@ func TestRemoveTaskFromSessionSuccess(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
-	m.On("RemoveTask", "12345", "TEST01").Return(nil)
+	setupAndTearDownForAuth := setupTestCaseForAuth(t)
+	defer setupAndTearDownForAuth(t)
 
-	app := NewServer(&Config{
-		Static: static{Prefix: "/public", Path: "../../static"},
-	}, m).Start()
+	m.On("RemoveTask", "12345", "TEST01").Return(nil)
 
 	req, _ := http.NewRequest(
 		"DELETE",
 		"/api/sessions/12345/tasks/TEST01",
 		nil,
 	)
+
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 
 	res, err := app.Test(req, -1)
 
@@ -654,11 +712,10 @@ func TestUpdateTaskEstimateOfSessionFails(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
-	m.On("AddEstimateToTask", "12345", "TEST01", 1.2, 0.2).Return(fmt.Errorf("Unable to add estimate"))
+	setupAndTearDownForAuth := setupTestCaseForAuth(t)
+	defer setupAndTearDownForAuth(t)
 
-	app := NewServer(&Config{
-		Static: static{Prefix: "/public", Path: "../../static"},
-	}, m).Start()
+	m.On("AddEstimateToTask", "12345", "TEST01", 1.2, 0.2).Return(fmt.Errorf("Unable to add estimate"))
 
 	payloadf := map[string]interface{}{
 		"effort":            1.2,
@@ -674,6 +731,7 @@ func TestUpdateTaskEstimateOfSessionFails(t *testing.T) {
 		bytes.NewBuffer(body),
 	)
 
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 	req.Header.Set("Content-Type", "application/json")
 
 	res, err := app.Test(req, -1)
@@ -693,9 +751,8 @@ func TestUpdateTaskEstimateOfSessionFailsDueToMissingHeader(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
-	app := NewServer(&Config{
-		Static: static{Prefix: "/public", Path: "../../static"},
-	}, m).Start()
+	setupAndTearDownForAuth := setupTestCaseForAuth(t)
+	defer setupAndTearDownForAuth(t)
 
 	payloadf := map[string]interface{}{
 		"effort":            1.2,
@@ -710,6 +767,8 @@ func TestUpdateTaskEstimateOfSessionFailsDueToMissingHeader(t *testing.T) {
 		"/api/sessions/12345/tasks/TEST01",
 		bytes.NewBuffer(body),
 	)
+
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 
 	res, err := app.Test(req, -1)
 
@@ -728,11 +787,10 @@ func TestUpdateTaskEstimateOfSessionSuccess(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
-	m.On("AddEstimateToTask", "12345", "TEST01", 1.2, 0.2).Return(nil)
+	setupAndTearDownForAuth := setupTestCaseForAuth(t)
+	defer setupAndTearDownForAuth(t)
 
-	app := NewServer(&Config{
-		Static: static{Prefix: "/public", Path: "../../static"},
-	}, m).Start()
+	m.On("AddEstimateToTask", "12345", "TEST01", 1.2, 0.2).Return(nil)
 
 	payloadf := map[string]interface{}{
 		"effort":            1.2,
@@ -748,6 +806,7 @@ func TestUpdateTaskEstimateOfSessionSuccess(t *testing.T) {
 		bytes.NewBuffer(body),
 	)
 
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 	req.Header.Set("Content-Type", "application/json")
 
 	res, err := app.Test(req, -1)
@@ -766,17 +825,18 @@ func TestResetEstimateOfTaskFails(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
-	m.On("RemoveEstimateFromTask", "12345", "TEST01").Return(fmt.Errorf("Unable to reset estimate"))
+	setupAndTearDownForAuth := setupTestCaseForAuth(t)
+	defer setupAndTearDownForAuth(t)
 
-	app := NewServer(&Config{
-		Static: static{Prefix: "/public", Path: "../../static"},
-	}, m).Start()
+	m.On("RemoveEstimateFromTask", "12345", "TEST01").Return(fmt.Errorf("Unable to reset estimate"))
 
 	req, _ := http.NewRequest(
 		"DELETE",
 		"/api/sessions/12345/tasks/TEST01/estimate",
 		nil,
 	)
+
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 
 	res, err := app.Test(req, -1)
 
@@ -795,17 +855,18 @@ func TestResetEstimateOfTaskSuccess(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
-	m.On("RemoveEstimateFromTask", "12345", "TEST01").Return(nil)
+	setupAndTearDownForAuth := setupTestCaseForAuth(t)
+	defer setupAndTearDownForAuth(t)
 
-	app := NewServer(&Config{
-		Static: static{Prefix: "/public", Path: "../../static"},
-	}, m).Start()
+	m.On("RemoveEstimateFromTask", "12345", "TEST01").Return(nil)
 
 	req, _ := http.NewRequest(
 		"DELETE",
 		"/api/sessions/12345/tasks/TEST01/estimate",
 		nil,
 	)
+
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 
 	res, err := app.Test(req, -1)
 
@@ -823,16 +884,15 @@ func TestAddUserEstimateToSessionFails(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
+	setupAndTearDownForAuth := setupTestCaseForAuth(t)
+	defer setupAndTearDownForAuth(t)
+
 	m.On("AddEstimate", "12345", datastore.Estimate{
 		TaskID:         "TEST01",
 		UserName:       "Tigger",
 		BestCase:       0.5,
 		MostLikelyCase: 1.5,
 		WorstCase:      3.0}).Return(fmt.Errorf("Unable to add estimate"))
-
-	app := NewServer(&Config{
-		Static: static{Prefix: "/public", Path: "../../static"},
-	}, m).Start()
 
 	payloadf := map[string]interface{}{
 		"id":   "TEST01",
@@ -851,6 +911,7 @@ func TestAddUserEstimateToSessionFails(t *testing.T) {
 		bytes.NewBuffer(body),
 	)
 
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 	req.Header.Set("Content-Type", "application/json")
 
 	res, err := app.Test(req, -1)
@@ -870,9 +931,8 @@ func TestAddUserEstimateToSessionFailsDueToMissingHeader(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
-	app := NewServer(&Config{
-		Static: static{Prefix: "/public", Path: "../../static"},
-	}, m).Start()
+	setupAndTearDownForAuth := setupTestCaseForAuth(t)
+	defer setupAndTearDownForAuth(t)
 
 	payloadf := map[string]interface{}{
 		"id":   "TEST01",
@@ -890,6 +950,8 @@ func TestAddUserEstimateToSessionFailsDueToMissingHeader(t *testing.T) {
 		"/api/sessions/12345/estimates",
 		bytes.NewBuffer(body),
 	)
+
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 
 	res, err := app.Test(req, -1)
 
@@ -908,16 +970,15 @@ func TestAddUserEstimateToSessionSuccess(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
+	setupAndTearDownForAuth := setupTestCaseForAuth(t)
+	defer setupAndTearDownForAuth(t)
+
 	m.On("AddEstimate", "12345", datastore.Estimate{
 		TaskID:         "TEST01",
 		UserName:       "Tigger",
 		BestCase:       0.5,
 		MostLikelyCase: 1.5,
 		WorstCase:      3.0}).Return(nil)
-
-	app := NewServer(&Config{
-		Static: static{Prefix: "/public", Path: "../../static"},
-	}, m).Start()
 
 	payloadf := map[string]interface{}{
 		"id":   "TEST01",
@@ -936,6 +997,7 @@ func TestAddUserEstimateToSessionSuccess(t *testing.T) {
 		bytes.NewBuffer(body),
 	)
 
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 	req.Header.Set("Content-Type", "application/json")
 
 	res, err := app.Test(req, -1)
@@ -955,19 +1017,20 @@ func TestRemoveUserEstimateFromSessionFails(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
+	setupAndTearDownForAuth := setupTestCaseForAuth(t)
+	defer setupAndTearDownForAuth(t)
+
 	m.On("RemoveEstimate", "12345", datastore.Estimate{
 		TaskID:   "TEST01",
 		UserName: "Tigger"}).Return(fmt.Errorf("Unable to remove estimate"))
-
-	app := NewServer(&Config{
-		Static: static{Prefix: "/public", Path: "../../static"},
-	}, m).Start()
 
 	req, _ := http.NewRequest(
 		"DELETE",
 		"/api/sessions/12345/estimates/Tigger/TEST01",
 		nil,
 	)
+
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 
 	res, err := app.Test(req, -1)
 
@@ -986,19 +1049,20 @@ func TestRemoveUserEstimateFromSessionSuccess(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
+	setupAndTearDownForAuth := setupTestCaseForAuth(t)
+	defer setupAndTearDownForAuth(t)
+
 	m.On("RemoveEstimate", "12345", datastore.Estimate{
 		TaskID:   "TEST01",
 		UserName: "Tigger"}).Return(nil)
-
-	app := NewServer(&Config{
-		Static: static{Prefix: "/public", Path: "../../static"},
-	}, m).Start()
 
 	req, _ := http.NewRequest(
 		"DELETE",
 		"/api/sessions/12345/estimates/Tigger/TEST01",
 		nil,
 	)
+
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 
 	res, err := app.Test(req, -1)
 
@@ -1016,17 +1080,18 @@ func TestGetUserEstimatesFromSessionFails(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
-	m.On("GetEstimates", "12345").Return([]datastore.Estimate{}, fmt.Errorf("Unable to retrieve estimates"))
+	setupAndTearDownForAuth := setupTestCaseForAuth(t)
+	defer setupAndTearDownForAuth(t)
 
-	app := NewServer(&Config{
-		Static: static{Prefix: "/public", Path: "../../static"},
-	}, m).Start()
+	m.On("GetEstimates", "12345").Return([]datastore.Estimate{}, fmt.Errorf("Unable to retrieve estimates"))
 
 	req, _ := http.NewRequest(
 		"GET",
 		"/api/sessions/12345/estimates",
 		nil,
 	)
+
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 
 	res, err := app.Test(req, -1)
 
@@ -1045,17 +1110,18 @@ func TestGetUserEstimatesFromSessionSuccess(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
-	m.On("GetEstimates", "12345").Return([]datastore.Estimate{datastore.Estimate{TaskID: "TEST01"}}, nil)
+	setupAndTearDownForAuth := setupTestCaseForAuth(t)
+	defer setupAndTearDownForAuth(t)
 
-	app := NewServer(&Config{
-		Static: static{Prefix: "/public", Path: "../../static"},
-	}, m).Start()
+	m.On("GetEstimates", "12345").Return([]datastore.Estimate{datastore.Estimate{TaskID: "TEST01"}}, nil)
 
 	req, _ := http.NewRequest(
 		"GET",
 		"/api/sessions/12345/estimates",
 		nil,
 	)
+
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 
 	res, err := app.Test(req, -1)
 
@@ -1074,17 +1140,18 @@ func TestGetAverageEstimateForTaskFromSessionFailsDueToErrorOnGetEstimates(t *te
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
-	m.On("GetEstimates", "12345").Return([]datastore.Estimate{}, fmt.Errorf("Unable to retrieve estimates"))
+	setupAndTearDownForAuth := setupTestCaseForAuth(t)
+	defer setupAndTearDownForAuth(t)
 
-	app := NewServer(&Config{
-		Static: static{Prefix: "/public", Path: "../../static"},
-	}, m).Start()
+	m.On("GetEstimates", "12345").Return([]datastore.Estimate{}, fmt.Errorf("Unable to retrieve estimates"))
 
 	req, _ := http.NewRequest(
 		"GET",
 		"/api/sessions/12345/estimates/TEST01",
 		nil,
 	)
+
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 
 	res, err := app.Test(req, -1)
 
@@ -1103,17 +1170,18 @@ func TestGetAverageEstimateForTaskFromSessionFailsDueToNoEstimates(t *testing.T)
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
-	m.On("GetEstimates", "12345").Return([]datastore.Estimate{}, nil)
+	setupAndTearDownForAuth := setupTestCaseForAuth(t)
+	defer setupAndTearDownForAuth(t)
 
-	app := NewServer(&Config{
-		Static: static{Prefix: "/public", Path: "../../static"},
-	}, m).Start()
+	m.On("GetEstimates", "12345").Return([]datastore.Estimate{}, nil)
 
 	req, _ := http.NewRequest(
 		"GET",
 		"/api/sessions/12345/estimates/TEST01",
 		nil,
 	)
+
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 
 	res, err := app.Test(req, -1)
 
@@ -1131,6 +1199,9 @@ func TestGetAverageEstimateForTaskFromSessionFailsDueToErrorOnGetUsers(t *testin
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
+	setupAndTearDownForAuth := setupTestCaseForAuth(t)
+	defer setupAndTearDownForAuth(t)
+
 	m.On("GetEstimates", "12345").Return([]datastore.Estimate{datastore.Estimate{
 		TaskID:   "TEST01",
 		UserName: "Tigger",
@@ -1138,15 +1209,13 @@ func TestGetAverageEstimateForTaskFromSessionFailsDueToErrorOnGetUsers(t *testin
 
 	m.On("GetUsers", "12345").Return([]string{}, fmt.Errorf("Unable to retrieve users"))
 
-	app := NewServer(&Config{
-		Static: static{Prefix: "/public", Path: "../../static"},
-	}, m).Start()
-
 	req, _ := http.NewRequest(
 		"GET",
 		"/api/sessions/12345/estimates/TEST01",
 		nil,
 	)
+
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 
 	res, err := app.Test(req, -1)
 
@@ -1165,6 +1234,9 @@ func TestGetAverageEstimateForTaskFromSessionFailsDueToInvalidEstimate(t *testin
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
+	setupAndTearDownForAuth := setupTestCaseForAuth(t)
+	defer setupAndTearDownForAuth(t)
+
 	m.On("GetEstimates", "12345").Return([]datastore.Estimate{datastore.Estimate{
 		TaskID:         "TEST01",
 		UserName:       "Tigger",
@@ -1175,15 +1247,13 @@ func TestGetAverageEstimateForTaskFromSessionFailsDueToInvalidEstimate(t *testin
 
 	m.On("GetUsers", "12345").Return([]string{"Tigger"}, nil)
 
-	app := NewServer(&Config{
-		Static: static{Prefix: "/public", Path: "../../static"},
-	}, m).Start()
-
 	req, _ := http.NewRequest(
 		"GET",
 		"/api/sessions/12345/estimates/TEST01",
 		nil,
 	)
+
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 
 	res, err := app.Test(req, -1)
 
@@ -1201,6 +1271,9 @@ func TestGetAverageEstimateForTaskFromSessionFailsDueToInvalidEstimate(t *testin
 func TestGetAverageEstimateForTaskFromSessionSuccessWithAllUsersProvidedEstimates(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
+
+	setupAndTearDownForAuth := setupTestCaseForAuth(t)
+	defer setupAndTearDownForAuth(t)
 
 	m.On("GetEstimates", "12345").Return([]datastore.Estimate{datastore.Estimate{
 		TaskID:         "TEST01",
@@ -1220,15 +1293,13 @@ func TestGetAverageEstimateForTaskFromSessionSuccessWithAllUsersProvidedEstimate
 
 	m.On("GetUsers", "12345").Return([]string{"Tigger", "Rabbit"}, nil)
 
-	app := NewServer(&Config{
-		Static: static{Prefix: "/public", Path: "../../static"},
-	}, m).Start()
-
 	req, _ := http.NewRequest(
 		"GET",
 		"/api/sessions/12345/estimates/TEST01",
 		nil,
 	)
+
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 
 	res, err := app.Test(req, -1)
 
@@ -1249,6 +1320,9 @@ func TestGetAverageEstimateForTaskFromSessionSuccessWithNotAllUsersProvidedEstim
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
+	setupAndTearDownForAuth := setupTestCaseForAuth(t)
+	defer setupAndTearDownForAuth(t)
+
 	m.On("GetEstimates", "12345").Return([]datastore.Estimate{datastore.Estimate{
 		TaskID:         "TEST01",
 		UserName:       "Tigger",
@@ -1267,15 +1341,13 @@ func TestGetAverageEstimateForTaskFromSessionSuccessWithNotAllUsersProvidedEstim
 
 	m.On("GetUsers", "12345").Return([]string{"Tigger", "Rabbit", "Piglet"}, nil)
 
-	app := NewServer(&Config{
-		Static: static{Prefix: "/public", Path: "../../static"},
-	}, m).Start()
-
 	req, _ := http.NewRequest(
 		"GET",
 		"/api/sessions/12345/estimates/TEST01",
 		nil,
 	)
+
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 
 	res, err := app.Test(req, -1)
 
@@ -1297,17 +1369,18 @@ func TestGetUserWithMaxEstimateDistanceForTaskFromSessionFailsDueToErrorOnGetEst
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
-	m.On("GetEstimates", "12345").Return([]datastore.Estimate{}, fmt.Errorf("Unable to retrieve estimates"))
+	setupAndTearDownForAuth := setupTestCaseForAuth(t)
+	defer setupAndTearDownForAuth(t)
 
-	app := NewServer(&Config{
-		Static: static{Prefix: "/public", Path: "../../static"},
-	}, m).Start()
+	m.On("GetEstimates", "12345").Return([]datastore.Estimate{}, fmt.Errorf("Unable to retrieve estimates"))
 
 	req, _ := http.NewRequest(
 		"GET",
 		"/api/sessions/12345/estimates/TEST01/users/distance",
 		nil,
 	)
+
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 
 	res, err := app.Test(req, -1)
 
@@ -1326,17 +1399,18 @@ func TestGetUserWithMaxEstimateDistanceForTaskFromSessionFailsDueToNoEstimates(t
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
-	m.On("GetEstimates", "12345").Return([]datastore.Estimate{}, nil)
+	setupAndTearDownForAuth := setupTestCaseForAuth(t)
+	defer setupAndTearDownForAuth(t)
 
-	app := NewServer(&Config{
-		Static: static{Prefix: "/public", Path: "../../static"},
-	}, m).Start()
+	m.On("GetEstimates", "12345").Return([]datastore.Estimate{}, nil)
 
 	req, _ := http.NewRequest(
 		"GET",
 		"/api/sessions/12345/estimates/TEST01/users/distance",
 		nil,
 	)
+
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 
 	res, err := app.Test(req, -1)
 
@@ -1355,6 +1429,9 @@ func TestGetUserWithMaxEstimateDistanceForTaskFromSessionFailsDueToInvalidEstima
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
 
+	setupAndTearDownForAuth := setupTestCaseForAuth(t)
+	defer setupAndTearDownForAuth(t)
+
 	m.On("GetEstimates", "12345").Return([]datastore.Estimate{datastore.Estimate{
 		TaskID:         "TEST01",
 		UserName:       "Tigger",
@@ -1365,15 +1442,13 @@ func TestGetUserWithMaxEstimateDistanceForTaskFromSessionFailsDueToInvalidEstima
 
 	m.On("GetUsers", "12345").Return([]string{"Tigger"}, nil)
 
-	app := NewServer(&Config{
-		Static: static{Prefix: "/public", Path: "../../static"},
-	}, m).Start()
-
 	req, _ := http.NewRequest(
 		"GET",
 		"/api/sessions/12345/estimates/TEST01/users/distance",
 		nil,
 	)
+
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 
 	res, err := app.Test(req, -1)
 
@@ -1391,6 +1466,9 @@ func TestGetUserWithMaxEstimateDistanceForTaskFromSessionFailsDueToInvalidEstima
 func TestGetUserWithMaxEstimateDistanceForTaskFromSessionSuccess(t *testing.T) {
 	setupAndTearDown := setupTestCaseForMock(t)
 	defer setupAndTearDown(t)
+
+	setupAndTearDownForAuth := setupTestCaseForAuth(t)
+	defer setupAndTearDownForAuth(t)
 
 	m.On("GetEstimates", "12345").Return([]datastore.Estimate{datastore.Estimate{
 		TaskID:         "TEST01",
@@ -1417,15 +1495,13 @@ func TestGetUserWithMaxEstimateDistanceForTaskFromSessionSuccess(t *testing.T) {
 
 	m.On("GetUsers", "12345").Return([]string{"Tigger", "Rabbit", "Piglet"}, nil)
 
-	app := NewServer(&Config{
-		Static: static{Prefix: "/public", Path: "../../static"},
-	}, m).Start()
-
 	req, _ := http.NewRequest(
 		"GET",
 		"/api/sessions/12345/estimates/TEST01/users/distance",
 		nil,
 	)
+
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 
 	res, err := app.Test(req, -1)
 
@@ -1444,15 +1520,16 @@ func TestSmokeWithRealDB(t *testing.T) {
 	setupAndTearDown := setupTestCaseForRealDatastore(t)
 	defer setupAndTearDown(t)
 
-	app := NewServer(&Config{
-		Static: static{Prefix: "/public", Path: "../../static"},
-	}, ds).Start()
+	setupAndTearDownForAuth := setupTestCaseForAuth(t)
+	defer setupAndTearDownForAuth(t)
 
 	req, _ := http.NewRequest(
 		"POST",
 		"/api/sessions",
 		nil,
 	)
+
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 
 	res, err := app.Test(req, -1)
 
@@ -1477,6 +1554,8 @@ func TestSmokeWithRealDB(t *testing.T) {
 		"/api/sessions/"+token+"/tasks",
 		bytes.NewBuffer(body),
 	)
+
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 	req.Header.Set("Content-Type", "application/json")
 
 	res, err = app.Test(req, -1)
@@ -1501,6 +1580,8 @@ func TestSmokeWithRealDB(t *testing.T) {
 		"/api/sessions/"+token+"/tasks",
 		bytes.NewBuffer(body),
 	)
+
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 	req.Header.Set("Content-Type", "application/json")
 
 	res, err = app.Test(req, -1)
@@ -1524,6 +1605,8 @@ func TestSmokeWithRealDB(t *testing.T) {
 		"/api/sessions/"+token+"/users",
 		bytes.NewBuffer(body),
 	)
+
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 	req.Header.Set("Content-Type", "application/json")
 
 	res, err = app.Test(req, -1)
@@ -1547,6 +1630,8 @@ func TestSmokeWithRealDB(t *testing.T) {
 		"/api/sessions/"+token+"/users",
 		bytes.NewBuffer(body),
 	)
+
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 	req.Header.Set("Content-Type", "application/json")
 
 	res, err = app.Test(req, -1)
@@ -1574,6 +1659,8 @@ func TestSmokeWithRealDB(t *testing.T) {
 		"/api/sessions/"+token+"/estimates",
 		bytes.NewBuffer(body),
 	)
+
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 	req.Header.Set("Content-Type", "application/json")
 
 	res, err = app.Test(req, -1)
@@ -1601,6 +1688,8 @@ func TestSmokeWithRealDB(t *testing.T) {
 		"/api/sessions/"+token+"/estimates",
 		bytes.NewBuffer(body),
 	)
+
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 	req.Header.Set("Content-Type", "application/json")
 
 	res, err = app.Test(req, -1)
@@ -1628,6 +1717,8 @@ func TestSmokeWithRealDB(t *testing.T) {
 		"/api/sessions/"+token+"/estimates",
 		bytes.NewBuffer(body),
 	)
+
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 	req.Header.Set("Content-Type", "application/json")
 
 	res, err = app.Test(req, -1)
@@ -1644,6 +1735,8 @@ func TestSmokeWithRealDB(t *testing.T) {
 		"/api/sessions/"+token+"/estimates",
 		nil,
 	)
+
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 
 	res, err = app.Test(req, -1)
 
@@ -1670,6 +1763,8 @@ func TestSmokeWithRealDB(t *testing.T) {
 		nil,
 	)
 
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
+
 	res, err = app.Test(req, -1)
 
 	assert.NoError(t, err)
@@ -1684,6 +1779,8 @@ func TestSmokeWithRealDB(t *testing.T) {
 		"/api/sessions/"+token+"/estimates",
 		nil,
 	)
+
+	req.Header.Set("Authorization", "Bearer "+jwtoken)
 
 	res, err = app.Test(req, -1)
 

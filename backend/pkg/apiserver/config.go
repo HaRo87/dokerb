@@ -10,14 +10,26 @@ import (
 
 // Config struct for project config
 type Config struct {
-	Server   server   `yaml:"server"`
-	Database database `yaml:"database"`
-	Static   static   `yaml:"static"`
+	Server         server     `yaml:"server"`
+	Authentication auth       `yaml:"auth"`
+	Database       database   `yaml:"database"`
+	Static         static     `yaml:"static"`
+	SimpleAuth     authSimple `yaml:"simple-auth"`
 }
 
 type server struct {
 	Host string `yaml:"host"`
 	Port string `yaml:"port"`
+}
+
+type auth struct {
+	Type       string `yaml:"type"`
+	SingingKey string `yaml:"signingKey"`
+}
+
+type authSimple struct {
+	User     string `yaml:"user"`
+	Password string `yaml:"password"`
 }
 
 type database struct {

@@ -75,13 +75,17 @@ func TestAPIRoutes(t *testing.T) {
 	m.On("CreateSession").Return("", nil)
 	// Start the app as it is done in the main function
 	app1 := NewServer(&Config{
-		Database: database{Location: td + "/my.db"},
-		Static:   static{Prefix: "/public", Path: "../../static"},
+		Database:       database{Location: td + "/my.db"},
+		Authentication: auth{Type: "simple", SingingKey: "TEST1234"},
+		Static:         static{Prefix: "/public", Path: "../../static"},
+		SimpleAuth:     authSimple{User: "Tigger", Password: "JUMP1234"},
 	}, m).Start()
 
 	app2 := NewServer(&Config{
-		Database: database{Location: td + "/my-second.db"},
-		Static:   static{Prefix: "/", Path: "../../static"},
+		Database:       database{Location: td + "/my-second.db"},
+		Authentication: auth{Type: "simple", SingingKey: "TEST1234"},
+		Static:         static{Prefix: "/", Path: "../../static"},
+		SimpleAuth:     authSimple{User: "Tigger", Password: "JUMP1234"},
 	}, m).Start()
 
 	// Needed routes

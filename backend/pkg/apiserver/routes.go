@@ -2,10 +2,13 @@ package apiserver
 
 import (
 	"github.com/arsmn/fiber-swagger/v2"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gofiber/fiber/v2"
+	jwtware "github.com/gofiber/jwt/v2"
 	_ "github.com/haro87/dokerb/docs"
 	"github.com/haro87/dokerb/pkg/compute"
 	"github.com/haro87/dokerb/pkg/datastore"
+	"time"
 )
 
 // DocEntry represents a single documentation entry
@@ -84,6 +87,20 @@ type User struct {
 	Name string `json:"name" example:"Tigger" format:"string"`
 }
 
+// LoginResponse represents the response of a successful login request
+type LoginResponse struct {
+	Token string `json:"token" example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c" format:"string"`
+	User  string `json:"name" example:"Tigger" format:"string"`
+}
+
+// LoginRequest represents a login request
+type LoginRequest struct {
+	User     string `json:"user" example:"Tigger" format:"string"`
+	Password string `json:"password" example:"Jump1234" format:"string"`
+}
+
+var config *Config
+
 // Routes list of the available routes for project
 // @title Doker Backend API
 // @version 0.1.0
@@ -97,13 +114,17 @@ type User struct {
 
 // @host localhost:5000
 // @BasePath /api
-func Routes(app *fiber.App, store datastore.DataStore) {
+func Routes(app *fiber.App, store datastore.DataStore, conf *Config) {
+	config = conf
+
 	// Create group for API routes
 	APIGroup := app.Group("/api")
 
 	APIGroup.Get("/swagger/*", swagger.Handler)
 
 	addDocRoute(APIGroup)
+
+	addLoginRoute(APIGroup, store)
 
 	addCreateSessionRoute(APIGroup, store)
 
@@ -179,7 +200,7 @@ func addDocRoute(api fiber.Router) {
 // @Failure 500 {object} ErrorResponse
 // @Router /sessions [post]
 func addCreateSessionRoute(api fiber.Router, store datastore.DataStore) {
-	api.Post("/sessions", func(c *fiber.Ctx) error {
+	api.Post("/sessions", protected(), func(c *fiber.Ctx) error {
 		t, err := store.CreateSession()
 
 		if err != nil {
@@ -208,7 +229,7 @@ func addCreateSessionRoute(api fiber.Router, store datastore.DataStore) {
 // @Failure 500 {object} ErrorResponse
 // @Router /sessions/{token} [delete]
 func addRemoveSessionRoute(api fiber.Router, store datastore.DataStore) {
-	api.Delete("/sessions/:token", func(c *fiber.Ctx) error {
+	api.Delete("/sessions/:token", protected(), func(c *fiber.Ctx) error {
 		if err := store.RemoveSession(c.Params("token")); err != nil {
 			data := ErrorResponse{
 				Message: "error",
@@ -235,7 +256,7 @@ func addRemoveSessionRoute(api fiber.Router, store datastore.DataStore) {
 // @Failure 500 {object} ErrorResponse
 // @Router /sessions/{token}/users [post]
 func addAddUserToSessionRoute(api fiber.Router, store datastore.DataStore) {
-	api.Post("/sessions/:token/users", func(c *fiber.Ctx) error {
+	api.Post("/sessions/:token/users", protected(), func(c *fiber.Ctx) error {
 		u := new(User)
 
 		if err := c.BodyParser(u); err != nil {
@@ -272,7 +293,7 @@ func addAddUserToSessionRoute(api fiber.Router, store datastore.DataStore) {
 // @Failure 500 {object} ErrorResponse
 // @Router /sessions/{token}/users [get]
 func addGetUsersFromSessionRoute(api fiber.Router, store datastore.DataStore) {
-	api.Get("/sessions/:token/users", func(c *fiber.Ctx) error {
+	api.Get("/sessions/:token/users", protected(), func(c *fiber.Ctx) error {
 		u, e := store.GetUsers(c.Params("token"))
 
 		if e != nil {
@@ -302,7 +323,7 @@ func addGetUsersFromSessionRoute(api fiber.Router, store datastore.DataStore) {
 // @Failure 500 {object} ErrorResponse
 // @Router /sessions/{token}/users/{name} [delete]
 func addRemoveUserFromSessionRoute(api fiber.Router, store datastore.DataStore) {
-	api.Delete("/sessions/:token/users/:name", func(c *fiber.Ctx) error {
+	api.Delete("/sessions/:token/users/:name", protected(), func(c *fiber.Ctx) error {
 		if err := store.LeaveSession(c.Params("token"), c.Params("name")); err != nil {
 			data := ErrorResponse{
 				Message: "error",
@@ -328,7 +349,7 @@ func addRemoveUserFromSessionRoute(api fiber.Router, store datastore.DataStore) 
 // @Failure 500 {object} ErrorResponse
 // @Router /sessions/{token}/tasks [get]
 func addGetTasksFromSessionRoute(api fiber.Router, store datastore.DataStore) {
-	api.Get("/sessions/:token/tasks", func(c *fiber.Ctx) error {
+	api.Get("/sessions/:token/tasks", protected(), func(c *fiber.Ctx) error {
 		tasks, e := store.GetTasks(c.Params("token"))
 
 		if e != nil {
@@ -359,7 +380,7 @@ func addGetTasksFromSessionRoute(api fiber.Router, store datastore.DataStore) {
 // @Failure 500 {object} ErrorResponse
 // @Router /sessions/{token}/tasks [post]
 func addAddTaskToSessionRoute(api fiber.Router, store datastore.DataStore) {
-	api.Post("/sessions/:token/tasks", func(c *fiber.Ctx) error {
+	api.Post("/sessions/:token/tasks", protected(), func(c *fiber.Ctx) error {
 		task := new(Task)
 
 		if err := c.BodyParser(task); err != nil {
@@ -397,7 +418,7 @@ func addAddTaskToSessionRoute(api fiber.Router, store datastore.DataStore) {
 // @Failure 500 {object} ErrorResponse
 // @Router /sessions/{token}/tasks/{id} [delete]
 func addRemoveTaskFromSessionRoute(api fiber.Router, store datastore.DataStore) {
-	api.Delete("/sessions/:token/tasks/:id", func(c *fiber.Ctx) error {
+	api.Delete("/sessions/:token/tasks/:id", protected(), func(c *fiber.Ctx) error {
 		if err := store.RemoveTask(c.Params("token"), c.Params("id")); err != nil {
 			data := ErrorResponse{
 				Message: "error",
@@ -426,7 +447,7 @@ func addRemoveTaskFromSessionRoute(api fiber.Router, store datastore.DataStore) 
 // @Failure 500 {object} ErrorResponse
 // @Router /sessions/{token}/tasks/{id} [put]
 func addUpdateTaskEstimateOfTaskRoute(api fiber.Router, store datastore.DataStore) {
-	api.Put("/sessions/:token/tasks/:id", func(c *fiber.Ctx) error {
+	api.Put("/sessions/:token/tasks/:id", protected(), func(c *fiber.Ctx) error {
 		es := new(Estimate)
 
 		if err := c.BodyParser(es); err != nil {
@@ -463,7 +484,7 @@ func addUpdateTaskEstimateOfTaskRoute(api fiber.Router, store datastore.DataStor
 // @Failure 500 {object} ErrorResponse
 // @Router /sessions/{token}/tasks/{id}/estimate [delete]
 func addResetEstimateOfTaskRoute(api fiber.Router, store datastore.DataStore) {
-	api.Delete("/sessions/:token/tasks/:id/estimate", func(c *fiber.Ctx) error {
+	api.Delete("/sessions/:token/tasks/:id/estimate", protected(), func(c *fiber.Ctx) error {
 		if err := store.RemoveEstimateFromTask(c.Params("token"), c.Params("id")); err != nil {
 			data := ErrorResponse{
 				Message: "error",
@@ -491,7 +512,7 @@ func addResetEstimateOfTaskRoute(api fiber.Router, store datastore.DataStore) {
 // @Failure 500 {object} ErrorResponse
 // @Router /sessions/{token}/estimates [post]
 func addAddUserEstimateToSessionRoute(api fiber.Router, store datastore.DataStore) {
-	api.Post("/sessions/:token/estimates", func(c *fiber.Ctx) error {
+	api.Post("/sessions/:token/estimates", protected(), func(c *fiber.Ctx) error {
 		es := new(PerUserEstimate)
 
 		if err := c.BodyParser(es); err != nil {
@@ -539,7 +560,7 @@ func addAddUserEstimateToSessionRoute(api fiber.Router, store datastore.DataStor
 // @Failure 500 {object} ErrorResponse
 // @Router /sessions/{token}/estimates/{user}/{id} [delete]
 func addRemoveUserEstimateFromSessionRoute(api fiber.Router, store datastore.DataStore) {
-	api.Delete("/sessions/:token/estimates/:user/:id", func(c *fiber.Ctx) error {
+	api.Delete("/sessions/:token/estimates/:user/:id", protected(), func(c *fiber.Ctx) error {
 
 		est := datastore.Estimate{
 			TaskID:   c.Params("id"),
@@ -572,7 +593,7 @@ func addRemoveUserEstimateFromSessionRoute(api fiber.Router, store datastore.Dat
 // @Failure 500 {object} ErrorResponse
 // @Router /sessions/{token}/estimates [get]
 func addGetUserEstimatesFromSessionRoute(api fiber.Router, store datastore.DataStore) {
-	api.Get("/sessions/:token/estimates", func(c *fiber.Ctx) error {
+	api.Get("/sessions/:token/estimates", protected(), func(c *fiber.Ctx) error {
 
 		ests, e := store.GetEstimates(c.Params("token"))
 
@@ -604,7 +625,7 @@ func addGetUserEstimatesFromSessionRoute(api fiber.Router, store datastore.DataS
 // @Failure 500 {object} ErrorResponse
 // @Router /sessions/{token}/estimates/{id} [get]
 func addGetAverageEstimateForTaskFromSessionRoute(api fiber.Router, store datastore.DataStore) {
-	api.Get("/sessions/:token/estimates/:id", func(c *fiber.Ctx) error {
+	api.Get("/sessions/:token/estimates/:id", protected(), func(c *fiber.Ctx) error {
 
 		ests, e := store.GetEstimates(c.Params("token"))
 
@@ -683,7 +704,7 @@ func addGetAverageEstimateForTaskFromSessionRoute(api fiber.Router, store datast
 // @Failure 500 {object} ErrorResponse
 // @Router /sessions/{token}/estimates/{id}/users/distance [get]
 func addGetUserWithMaxEstimateDistanceForTaskFromSessionRoute(api fiber.Router, store datastore.DataStore) {
-	api.Get("/sessions/:token/estimates/:id/users/distance", func(c *fiber.Ctx) error {
+	api.Get("/sessions/:token/estimates/:id/users/distance", protected(), func(c *fiber.Ctx) error {
 
 		ests, e := store.GetEstimates(c.Params("token"))
 
@@ -723,6 +744,20 @@ func addGetUserWithMaxEstimateDistanceForTaskFromSessionRoute(api fiber.Router, 
 	})
 }
 
+// Adding the Login route
+// @Summary Get JWT after successful authentication
+// @Description Returns a JWT after a successful authentication
+// @Tags auth
+// @Produce  json
+// @Param  login body LoginRequest true "Login Request"
+// @Success 200 {object} LoginResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /login [post]
+func addLoginRoute(api fiber.Router, store datastore.DataStore) {
+	api.Post("/login", login)
+}
+
 func checkForAllUsers(users []string, user string) []string {
 	for i, u := range users {
 		if u == user {
@@ -731,4 +766,81 @@ func checkForAllUsers(users []string, user string) []string {
 		}
 	}
 	return users
+}
+
+func protected() fiber.Handler {
+	return jwtware.New(jwtware.Config{
+		SigningKey:   []byte(config.Authentication.SingingKey),
+		ErrorHandler: jwtError,
+	})
+}
+
+func jwtError(c *fiber.Ctx, err error) error {
+	if err.Error() == "Missing or malformed JWT" {
+		data := ErrorResponse{
+			Message: "error",
+			Reason:  "Missing or malformed JWT",
+		}
+		return c.Status(fiber.StatusBadRequest).
+			JSON(data)
+	}
+	data := ErrorResponse{
+		Message: "error",
+		Reason:  "Invalid or expired JWT",
+	}
+	return c.Status(fiber.StatusUnauthorized).
+		JSON(data)
+}
+
+func login(ctx *fiber.Ctx) error {
+
+	var body LoginRequest
+	err := ctx.BodyParser(&body)
+	if err != nil {
+		data := ErrorResponse{
+			Message: "error",
+			Reason:  "cannot parse json",
+		}
+		err = ctx.Status(fiber.StatusBadRequest).JSON(data)
+		return err
+	}
+
+	if config.Authentication.Type == "simple-auth" {
+		if body.User != config.SimpleAuth.User || body.Password != config.SimpleAuth.Password {
+			data := ErrorResponse{
+				Message: "error",
+				Reason:  "Bad Credentials",
+			}
+			err = ctx.Status(fiber.StatusUnauthorized).JSON(data)
+			return err
+		}
+	} else {
+		data := ErrorResponse{
+			Message: "error",
+			Reason:  "Invalid authentication config on backend side",
+		}
+		err = ctx.Status(fiber.StatusUnauthorized).JSON(data)
+		return err
+	}
+
+	token := jwt.New(jwt.SigningMethodHS256)
+	claims := token.Claims.(jwt.MapClaims)
+	claims["exp"] = time.Now().Add(time.Hour * 24 * 7) // a week
+
+	s, err := token.SignedString([]byte(config.Authentication.SingingKey))
+	if err != nil {
+		err = ctx.SendStatus(fiber.StatusInternalServerError)
+		return err
+	}
+
+	err = ctx.Status(fiber.StatusOK).JSON(fiber.Map{
+		"token": s,
+		"user": struct {
+			Name string `json:"name"`
+		}{
+			Name: body.User,
+		},
+	})
+
+	return err
 }

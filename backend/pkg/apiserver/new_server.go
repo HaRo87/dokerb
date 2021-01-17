@@ -46,7 +46,7 @@ func (s *APIServer) Start() *fiber.App {
 	}
 
 	// Register API routes
-	Routes(app, s.ds)
+	Routes(app, s.ds, s.config)
 
 	return app
 }
